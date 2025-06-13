@@ -1,0 +1,354 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ModificationType {
+  CREATEEVENT
+  UPDATEEVENT
+  CREATECUPOM
+  UPDATECUPOM
+  CREATETICKET
+  UPDATETICKET
+  DETTACHCUPOM
+  ATTACHCUPOM
+}
+
+enum EventApprovalsStatus {
+  PENDING
+  APPROVE
+  REJECT
+}
+
+enum PaymentMethod {
+  CREDITCARD
+  PIX
+  DEBITCARD
+}
+
+enum UserType {
+  PERSONAL
+  PROFESSIONAL
+  TICKETTAKER
+  MASTER
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  CANCELED
+  FAILED
+}
+
+enum TicketSaleStatus {
+  CONFERRED
+  UNCONFERRED
+}
+
+enum Recurso {
+  CUPOMINSERT
+  CUPOMDELETE
+  CUPOMUPDATE
+  EVENTUPDATE
+  TICKETINSERT
+  TICKETUPDATE
+  TICKETDELETE
+  CUPOMATTACH
+}
+
+model Role {
+  id       String     @id @default(uuid())
+  name     String
+  UserRole UserRole[]
+
+  @@map("role")
+}
+
+model UserRole {
+  id      String @id @default(uuid())
+  user    User   @relation(fields: [useruid], references: [uid])
+  useruid String
+  role    Role   @relation(fields: [roleId], references: [id])
+  roleId  String
+}
+
+model RefreshToken {
+  id      String @id @default(uuid())
+  token   String @default(uuid())
+  user    User   @relation(fields: [useruid], references: [uid], onDelete: Cascade)
+  useruid String @unique
+
+  @@index([id])
+  @@map("refresh_token")
+}
+
+model User {
+  uid                    String           @id
+  email                  String           @unique
+  name                   String
+  password               String
+  isOwnerOfEstablishment Boolean?         @default(false)
+  stripeAccountId        String?          @unique()
+  stripeCustomerId       String?          @unique()
+  document               String?
+  avatar                 String?
+  deviceToken            String?
+  isActive               Boolean
+  resetToken             String?
+  type                   UserType         @default(PERSONAL)
+  TicketTacker           TicketTaker[]
+  Payment                Payment[]
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
+  Establishment          Establishment[]
+  Event                  Event[]
+  RefreshToken           RefreshToken[]
+  UserRole               UserRole[]
+  TicketSale             TicketSale[]
+  EventApprovals         EventApprovals[]
+  ManageEvents           EventsManager[]
+  EventLogs              EventAudit[]
+  TicketAudit            TicketAudit[]
+  CupomAudit             CupomAudit[]
+
+  @@index([uid])
+  @@map("users")
+}
+
+model Establishment {
+  id           String   @id @default(uuid())
+  name         String
+  coordinates  Json
+  address      String?
+  userOwner    User     @relation(fields: [userOwnerUid], references: [uid])
+  userOwnerUid String
+  photos       String[]
+  Event        Event[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Event {
+  id                String           @id @default(uuid())
+  user              User?            @relation(fields: [useruid], references: [uid])
+  name              String
+  useruid           String?
+  address           String?
+  coordinates_event Json?
+  dateTimestamp     DateTime
+  description       String
+  isActive          Boolean          @default(false) @map("is_active")
+  establishment     Establishment?   @relation(fields: [establishmentId], references: [id])
+  establishmentId   String?
+  ticketTakers      String[]
+  listNames         String[]
+  photos            String[]
+  Ticket            Ticket[]
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  EventApprovals    EventApprovals[]
+  ManageEvents      EventsManager[]
+  EventAudit        EventAudit[]
+  Cupom             Cupom[]
+
+  @@unique([establishmentId, dateTimestamp])
+  @@index([id])
+  @@map("events")
+}
+
+model EventApprovals {
+  id        String               @id @default(uuid())
+  user      User                 @relation(fields: [useruid], references: [uid])
+  useruid   String
+  event     Event                @relation(fields: [eventId], references: [id])
+  eventId   String               @unique() @map("event_id")
+  status    EventApprovalsStatus @default(PENDING)
+  comment   String?
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+
+  @@index([id])
+  @@map("events_approvals")
+}
+
+model EventAudit {
+  id               String           @id @default(uuid())
+  event            Event            @relation(fields: [entityId], references: [id])
+  user             User             @relation(fields: [useruid], references: [uid])
+  useruid          String
+  modificationType ModificationType
+  details          Json?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  entityId         String
+
+  @@index([id])
+  @@map("event_audit")
+}
+
+model TicketAudit {
+  id               String           @id @default(uuid())
+  ticket           Ticket           @relation(fields: [entityId], references: [id])
+  user             User             @relation(fields: [useruid], references: [uid])
+  useruid          String
+  modificationType ModificationType
+  details          Json?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  entityId         String
+
+  @@index([id])
+  @@map("ticket_audit")
+}
+
+model CupomAudit {
+  id               String           @id @default(uuid())
+  cupom            Cupom            @relation(fields: [entityId], references: [id])
+  user             User             @relation(fields: [useruid], references: [uid])
+  useruid          String
+  modificationType ModificationType
+  details          Json?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  entityId         String
+
+  @@index([id])
+  @@map("cupom_audit")
+}
+
+model EventsManager {
+  id        String    @id @default(uuid())
+  user      User      @relation(fields: [useruid], references: [uid])
+  recursos  Recurso[]
+  useruid   String
+  event     Event     @relation(fields: [eventId], references: [id])
+  eventId   String    @map("event_id")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  @@unique([useruid, eventId])
+  @@index([id])
+  @@map("events_manager")
+}
+
+model TicketTaker {
+  id                 String   @id @default(uuid())
+  userOwner          User     @relation(fields: [userOwnerUid], references: [uid])
+  userOwnerUid       String
+  userTicketTakerUid String   @unique
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([id, userOwnerUid, userTicketTakerUid])
+  @@map("ticket_takers")
+}
+
+model Ticket {
+  id                 String         @id @default(uuid())
+  description        String
+  price              Decimal        @db.Decimal(18, 2)
+  event              Event          @relation(fields: [eventId], references: [id])
+  eventId            String
+  quantity_available Int
+  Payment            Payment[]
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  TicketSale         TicketSale[]
+  TicketAudit        TicketAudit[]
+  TicketCupons       TicketCupons[]
+
+  @@index([id])
+  @@map("tickets")
+}
+
+model TicketSale {
+  id              String            @id @default(uuid())
+  ticket          Ticket            @relation(fields: [ticketId], references: [id])
+  payment         Payment           @relation(fields: [paymentId], references: [id])
+  user            User              @relation(fields: [useruid], references: [uid])
+  cupom           Cupom?            @relation(fields: [cupomId], references: [id])
+  cupomId         String?           @map("cupom_id")
+  ticketId        String
+  ticket_status   TicketSaleStatus? @default(UNCONFERRED)
+  paymentId       String
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  useruid         String
+  CuponsAplicados CuponsAplicados[]
+
+  @@index([id])
+  @@map("tickets_sale")
+}
+
+model CuponsAplicados {
+  id           String     @id @default(uuid())
+  ticketSale   TicketSale @relation(fields: [ticketSaleId], references: [id])
+  cupom        Cupom      @relation(fields: [cupomId], references: [id])
+  cupomId      String     @map("cupom_id")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+  ticketSaleId String     @map("ticket_sale_id")
+
+  @@unique([ticketSaleId, cupomId])
+  @@index([id])
+  @@map("cupons_aplicados")
+}
+
+model TicketCupons {
+  id        String   @id @default(uuid())
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  ticketId  String   @map("ticket_id")
+  cupom     Cupom    @relation(fields: [cupomId], references: [id])
+  cupomId   String   @map("cupom")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([ticketId, cupomId])
+  @@index([id])
+  @@map("ticket_cupons")
+}
+
+model Cupom {
+  id                 String            @id @default(uuid())
+  code               String
+  event              Event             @relation(fields: [eventId], references: [id])
+  eventId            String            @map("event_id")
+  quantity_available Int
+  descont_percent    Decimal?          @db.Decimal(5, 2)
+  discount_value     Decimal?          @db.Decimal(18, 2)
+  expiresAt          DateTime          @map("expires_at")
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  CuponsAplicados    CuponsAplicados[]
+  TicketSale         TicketSale[]
+  CupomAudit         CupomAudit[]
+  TicketCupons       TicketCupons[]
+
+  @@unique([eventId, code])
+  @@index([id])
+  @@map("cupons")
+}
+
+model Payment {
+  id             String        @id @default(uuid())
+  payment_method PaymentMethod
+  amount         Decimal       @db.Decimal(18, 2)
+  status         PaymentStatus
+  user           User          @relation(fields: [useruid], references: [uid])
+  ticket         Ticket        @relation(fields: [ticketId], references: [id])
+  useruid        String
+  ticketId       String
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  TicketSale     TicketSale[]
+
+  @@index([id])
+  @@map("payments")
+}
