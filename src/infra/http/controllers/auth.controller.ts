@@ -90,5 +90,29 @@ export class AuthController {
         return this.authService.refreshTokens(user.uid, refreshToken);
     }
 
+    @Get("auth/session")
+    async getSession(@Req() req) {
+        if (req.user) {
+            return { user: req.user }; 
+        } else {
+            throw new UnauthorizedException("Nenhuma sessão ativa");
+        }
+    }
+
+    @Get("auth/providers")
+    async getProviders() {
+        return {
+            google: { id: "google", name: "Google", type: "oauth" },
+            facebook: { id: "facebook", name: "Facebook", type: "oauth" },
+        };
+    }
+
+    @Post("auth/_log")
+    async logEvent(@Body() body: any) {
+        console.log("NextAuth.js Log Event:", body);
+        return { success: true }; 
+    }
+
 }
+
 
