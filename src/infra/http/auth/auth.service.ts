@@ -1,7 +1,7 @@
-import { BadRequestException, ForbiddenException, Injectable, InternalServerErrorException, UnauthorizedException, HttpException, HttpStatus } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, InternalServerErrorException, UnauthorizedException, HttpException, HttpStatus, NotFoundException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from "bcrypt";
-import { User, AccountRole } from '@application/user/entity/User';
+import { User } from '@application/user/entity/User';
 import { ConfigService } from '@nestjs/config';
 import { UserRepository } from '@application/user/repositories/user-repository';
 import { UserViewModel } from '../view-models/user/user-view-model';
@@ -42,21 +42,24 @@ export class AuthService {
         this.googleClient = new OAuth2Client(this.configService.get<string>('GOOGLE_CLIENT_ID'));
     }
 
-    async validateUser(email: string, pass: string): Promise<any> {
-        // ... (código existente de validateUser)
-        const { user, establishment } = await this.userRepository.findByEmail(email);
+    async findByEmail(email: string): Promise<any> {
+        const result = await this.userRepository.findByEmail(email);
 
-        if (!user) {
-            return null; // User not found
+        const { user } = result;
+
+        if(!user) {
+          throw new NotFoundException("Usuário não encontrado");
         }
 
+        return user;
+    }
+
+    async validateUserPassword(user: User, pass: string): Promise<void> {        
         const passwordMatch = await bcrypt.compare(pass, user.password);
 
-        if (passwordMatch) {
-            return user;
+        if (!passwordMatch) {
+          throw new UnauthorizedException("Usuário ou senha incorretos");
         }
-
-        return null; // Password doesn't match
     }
 
     async verifyGoogleIdToken(idToken: string): Promise<User> {
@@ -349,6 +352,7 @@ export class AuthService {
         }
 
         const { user } = await this.userRepository.findById(userId);
+        
         if (!user) {
              throw new ForbiddenException('Acesso negado - Usuário não encontrado');
         }
