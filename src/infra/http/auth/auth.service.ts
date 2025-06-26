@@ -41,23 +41,40 @@ export class AuthService {
     )  {
         this.googleClient = new OAuth2Client(this.configService.get<string>('GOOGLE_CLIENT_ID'));
     }
-
+    
+    
     async validateUser(email: string, pass: string): Promise<any> {
-        // ... (código existente de validateUser)
-        const { user, establishment } = await this.userRepository.findByEmail(email);
+    console.log(`[AuthService] Tentativa de login para o email: ${email}`);
 
-        if (!user) {
-            return null; // User not found
-        }
+    const result = await this.userRepository.findByEmail(email);
 
-        const passwordMatch = await bcrypt.compare(pass, user.password);
+if (!result || !result.user) {
+    return null; // User not found or invalid result
+}
 
-        if (passwordMatch) {
-            return user;
-        }
+const { user, establishment } = result;
 
+    if (!user) {
+        console.log(`[AuthService] Usuário não encontrado para o email: ${email}`);
+        return null; // User not found
+    }
+
+    console.log(`[AuthService] Usuário encontrado: ${user.email}`);
+    // CUIDADO: Não logue a senha em texto puro em produção. Apenas para depuração.
+    // console.log(`[AuthService] Senha fornecida (texto puro): ${pass}`); 
+    console.log(`[AuthService] Hash da senha no banco: ${user.password}`);
+
+    const passwordMatch = await bcrypt.compare(pass, user.password);
+
+    if (passwordMatch) {
+        console.log(`[AuthService] Senha corresponde! Login bem-sucedido para: ${user.email}`);
+        return user;
+    } else {
+        console.log(`[AuthService] Senha NÃO corresponde para o email: ${user.email}`);
         return null; // Password doesn't match
     }
+  }
+
 
     async verifyGoogleIdToken(idToken: string): Promise<User> {
         // ... (código existente de verifyGoogleIdToken)

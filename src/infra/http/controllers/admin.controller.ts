@@ -23,9 +23,9 @@ export class AdminController {
     @UseGuards(JwtAuthGuard)
     @Get('stats/overview')
     async getOverviewStats(@Req() req) {
-        const { role } = req.user;
+        const { type } = req.user;
 
-        if (role !== "MASTER") {
+        if (type !== "MASTER") {
             throw new UnauthorizedException("Acesso negado. Apenas usuários Master podem acessar estas informações.");
         }
 
@@ -79,9 +79,9 @@ export class AdminController {
     @UseGuards(JwtAuthGuard)
     @Get('users/all')
     async getAllUsers(@Req() req) {
-        const { role } = req.user;
+        const { type } = req.user;
 
-        if (role !== "MASTER") {
+        if (type !== "MASTER") {
             throw new UnauthorizedException("Acesso negado. Apenas usuários Master podem acessar estas informações.");
         }
 
@@ -105,9 +105,9 @@ export class AdminController {
     @UseGuards(JwtAuthGuard)
     @Get('users/professionals-detailed')
     async getProfessionalsDetailed(@Req() req) {
-        const { role } = req.user;
+        const { type } = req.user;
 
-        if (role !== "MASTER") {
+        if (type !== "MASTER") {
             throw new UnauthorizedException("Acesso negado. Apenas usuários Master podem acessar estas informações.");
         }
 
@@ -151,9 +151,9 @@ export class AdminController {
     @UseGuards(JwtAuthGuard)
     @Get('events/all')
     async getAllEvents(@Req() req) {
-        const { role } = req.user;
+        const { type } = req.user;
 
-        if (role !== "MASTER") {
+        if (type !== "MASTER") {
             throw new UnauthorizedException("Acesso negado. Apenas usuários Master podem acessar estas informações.");
         }
 
