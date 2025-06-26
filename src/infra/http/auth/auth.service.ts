@@ -15,7 +15,6 @@ import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { AxiosResponse } from 'axios';
 
-// <-- ADICIONADA INTERFACE
 interface IFacebookUser {
   id: string;
   name: string;
@@ -41,43 +40,9 @@ export class AuthService {
     )  {
         this.googleClient = new OAuth2Client(this.configService.get<string>('GOOGLE_CLIENT_ID'));
     }
-<<<<<<< HEAD
-    
-    
-    async validateUser(email: string, pass: string): Promise<any> {
-    console.log(`[AuthService] Tentativa de login para o email: ${email}`);
 
-    const result = await this.userRepository.findByEmail(email);
-
-if (!result || !result.user) {
-    return null; // User not found or invalid result
-}
-
-const { user, establishment } = result;
-
-    if (!user) {
-        console.log(`[AuthService] Usuário não encontrado para o email: ${email}`);
-        return null; // User not found
-    }
-
-    console.log(`[AuthService] Usuário encontrado: ${user.email}`);
-    // CUIDADO: Não logue a senha em texto puro em produção. Apenas para depuração.
-    // console.log(`[AuthService] Senha fornecida (texto puro): ${pass}`); 
-    console.log(`[AuthService] Hash da senha no banco: ${user.password}`);
-
-    const passwordMatch = await bcrypt.compare(pass, user.password);
-
-    if (passwordMatch) {
-        console.log(`[AuthService] Senha corresponde! Login bem-sucedido para: ${user.email}`);
-        return user;
-    } else {
-        console.log(`[AuthService] Senha NÃO corresponde para o email: ${user.email}`);
-        return null; // Password doesn't match
-=======
-
-    async findByEmail(email: string): Promise<any> {
+    async findByEmail(email: string): Promise<User> {
         const result = await this.userRepository.findByEmail(email);
-
         const { user } = result;
 
         if(!user) {
@@ -93,13 +58,9 @@ const { user, establishment } = result;
         if (!passwordMatch) {
           throw new UnauthorizedException("Usuário ou senha incorretos");
         }
->>>>>>> adc28d84afffc4eab260cd35bb11472ec8efc810
     }
-  }
-
 
     async verifyGoogleIdToken(idToken: string): Promise<User> {
-        // ... (código existente de verifyGoogleIdToken)
         try {
             const ticket = await this.googleClient.verifyIdToken({
                 idToken: idToken,
@@ -134,7 +95,6 @@ const { user, establishment } = result;
         name: string,
         avatar?: string
     ): Promise<User> {
-        // ... (código existente de validateOAuthLogin)
         try {
             let user: User | null = null;
             const existingUserResult = await this.userRepository.findByEmail(email);
@@ -163,7 +123,6 @@ const { user, establishment } = result;
         }
     }
 
-    // <-- ADICIONADA FUNÇÃO facebookLogin COMPLETA -->
     async facebookLogin(accessToken: string): Promise<any> {
         console.log(
           "--- [AuthService] facebookLogin initiated ---",
@@ -280,10 +239,9 @@ const { user, establishment } = result;
           }
           throw new UnauthorizedException("Falha na autenticação com Facebook.");
         }
-      }
+    }
 
     async login(user: User) {
-        // ... (código existente de login)
         try {
             if (!user || !user.uid) {
                 throw new BadRequestException("Dados de usuário inválidos para login.");
@@ -368,12 +326,10 @@ const { user, establishment } = result;
     }
 
     hashData(data: string) {
-        // ... (código existente de hashData)
         return bcrypt.hash(data, 10);
     }
 
     async refreshTokens(userId: string, refreshToken: string) {
-        // ... (código existente de refreshTokens)
         const hashedRefreshTokenFromDb = await this.userRepository.findRefreshTokenByUserId(userId);
 
         if (!hashedRefreshTokenFromDb) throw new ForbiddenException('Acesso negado - Token não encontrado');
@@ -401,7 +357,6 @@ const { user, establishment } = result;
     }
 
     async getTokens(userId: string, username: string, userRole: string) {
-        // ... (código existente de getTokens)
         const [accessToken, refreshToken] = await Promise.all([
             this.jwtService.signAsync(
                 {
@@ -432,5 +387,3 @@ const { user, establishment } = result;
         };
     }
 }
-
-
