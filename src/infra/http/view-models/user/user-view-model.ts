@@ -12,6 +12,8 @@ export class UserViewModel {
             isActive: user?.isActive,
             email: user?.email,
             avatar: user?.avatar,
+            phone: user?.phone,
+            birthDate: user?.birthDate,
             type: user?.type,
             createdAt: user?.createdAt,
             updatedAt: user?.updatedAt

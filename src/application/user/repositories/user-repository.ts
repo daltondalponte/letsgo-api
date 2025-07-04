@@ -12,6 +12,12 @@ export abstract class UserRepository {
         }[]
     } | null>;
     abstract findAll(): Promise<User[]>; // Novo método para a Dashboard Master
+    abstract findAllWithEstablishments(): Promise<{
+        userData: {
+            user: User,
+            establishment: Establishment | null
+        }[]
+    }>; // Novo método para buscar usuários com estabelecimentos
     abstract saveResetToken(id: string, resetToken: string): Promise<void>;
     abstract findById(id: string): Promise<{ user: User, establishment: Establishment } | null>;
     abstract createRefreshToken(userId: string, token: string): Promise<void>;

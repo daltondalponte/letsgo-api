@@ -21,7 +21,7 @@ export class FindEventsByUserUidOrEstablishmentId {
     async execute(request: EventRequest): Promise<EventResponse> {
         const { establishmentId, useruid } = request
 
-        const events = await this.eventRepository.findManyByUserUidOrEstablishmentId(null, establishmentId)
+        const events = await this.eventRepository.findManyByUserUidOrEstablishmentId(useruid, establishmentId)
 
         return { events }
     }

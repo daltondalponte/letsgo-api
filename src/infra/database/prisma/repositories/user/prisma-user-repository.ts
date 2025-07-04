@@ -83,6 +83,29 @@ export class PrismaUserRepository implements UserRepository {
         return users.map(PrismaUserMapper.toDomain);
     }
 
+    async findAllWithEstablishments(): Promise<{
+        userData: {
+            user: User,
+            establishment: Establishment | null
+        }[]
+    }> {
+        const users = await this.prisma.user.findMany({
+            include: {
+                Establishment: true,
+            },
+            orderBy: {
+                createdAt: 'desc'
+            }
+        });
+
+        const userData = users.map(u => ({
+            user: PrismaUserMapper.toDomain(u),
+            establishment: u.Establishment[0] ? PrismaEstablishmentMapper.toDomain(u.Establishment[0]) : null
+        }));
+
+        return { userData };
+    }
+
     async findRefreshTokenByUserId(userId: string): Promise<string> {
         const refreshToken = await this.prisma.refreshToken.findUnique({
             where: {

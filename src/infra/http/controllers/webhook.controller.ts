@@ -4,7 +4,6 @@ import { StripeService } from '@infra/payment/stripe.service';
 import Stripe from 'stripe';
 import { UpdatePayment } from '@application/payment/use-cases/update-payment';
 import { PaymentStatus } from '@application/payment/entity/Payment';
-import { FirebaseService } from '@infra/database/firebase/firebase.service';
 
 /**
  * Controller responsável por ouvir os eventos da Stripe.
@@ -19,8 +18,7 @@ export class WebHookController {
 
     constructor(
         private stripe: StripeService,
-        private updatePayment: UpdatePayment,
-        private firebaseService: FirebaseService
+        private updatePayment: UpdatePayment
     ) { }
 
     @Post()
@@ -44,7 +42,6 @@ export class WebHookController {
                 // Completa o pagamento na plataforma, bilhete fica válido
                 const paymentIntentSucceeded = event.data.object as any;
                 await this.updatePayment.execute({ paymentId: paymentIntentSucceeded.metadata.letsgo_payment_id, status: PaymentStatus.COMPLETED })
-                await this.firebaseService.sendNotification("Pagamento Aprovado!", "Seu pagamento foi aprovado com sucesso.", paymentIntentSucceeded.metadata?.letsgo_user_devicetoken)
                 break;
             case 'payment_intent.canceled':
                 // O pagamento foi cancelado

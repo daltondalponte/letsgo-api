@@ -19,18 +19,14 @@ export class FindAllProfessionals {
     ) { }
 
     async execute(): Promise<AccountResponse> {
-        // Obter todos os usuários
-        const users = await this.userRepository.findAll();
+        // Obter todos os usuários com estabelecimentos
+        const { userData } = await this.userRepository.findAllWithEstablishments();
         
-        // Filtrar apenas usuários do tipo PROFESSIONAL
-        const professionalUsers = users.filter(user => user.type === UserType.PROFESSIONAL);
-        
-        // Transformar no formato esperado pela interface
-        const userData = professionalUsers.map(user => ({
-            user,
-            establishment: null // Estabelecimento será preenchido separadamente se necessário
-        }));
+        // Filtrar apenas usuários do tipo PROFESSIONAL_OWNER e PROFESSIONAL_PROMOTER
+        const professionalUsers = userData.filter(data => 
+            data.user.type === UserType.PROFESSIONAL_OWNER || data.user.type === UserType.PROFESSIONAL_PROMOTER
+        );
 
-        return { userData };
+        return { userData: professionalUsers };
     }
 }

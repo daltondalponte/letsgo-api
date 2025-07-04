@@ -1,4 +1,4 @@
-import { IsBoolean, IsEmail, IsNotEmpty, IsOptional, IsString } from "class-validator";
+import { IsBoolean, IsEmail, IsNotEmpty, IsOptional, IsString, MinLength } from "class-validator";
 import { ApiProperty } from "@nestjs/swagger"
 
 export class UserBody {
@@ -16,6 +16,7 @@ export class UserBody {
     @ApiProperty()
     @IsNotEmpty()
     @IsString()
+    @MinLength(8, { message: 'A senha deve ter pelo menos 8 caracteres' })
     password: string;
 
     @ApiProperty()
@@ -41,6 +42,14 @@ export class UserBody {
     @ApiProperty()
     @IsOptional()
     @IsString()
-    type: 'PERSONAL' | 'PROFESSIONAL' | 'TICKETTAKER'
+    type: 'PERSONAL' | 'PROFESSIONAL_OWNER' | 'PROFESSIONAL_PROMOTER' | 'TICKETTAKER'
 
+    @ApiProperty()
+    @IsOptional()
+    @IsString()
+    phone: string;
+
+    @ApiProperty()
+    @IsOptional()
+    birthDate: Date;
 }

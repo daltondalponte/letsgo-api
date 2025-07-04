@@ -10,7 +10,7 @@ export class EnsureProfessionalUser implements CanActivate {
 
     const request = context.switchToHttp().getRequest();
 
-    const permissaoValida = request.user.role === "PROFESSIONAL"
+    const permissaoValida = request.user.role === "PROFESSIONAL_OWNER" || request.user.role === "PROFESSIONAL_PROMOTER"
 
     return permissaoValida;
   }

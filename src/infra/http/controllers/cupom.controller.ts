@@ -12,10 +12,6 @@ import { CanUpdateCuponsGuard } from '../auth/guards/cupom/can-update-cupons.gua
 import { EnsureManagerEvent } from '../auth/guards/ensure-manage-event.guard';
 import { UpdateBody } from '../dtos/cupom/update-body';
 import { CreateCupomAudit } from '@application/audit-entity/use-cases/cupom/create-cupom-audit';
-import { FindCuponsByEventId } from '@application/cupom/use-cases/find-by-event-id';
-import { EnsureOwnerEvent } from '../auth/guards/ensure-owner-event.guard';
-import { AttachCupomTicket } from '@application/cupom/use-cases/attach-cupom-ticket';
-import { DettachCupomTicket } from '@application/cupom/use-cases/dettach-cupom-ticket copy';
 
 @ApiTags("Cupom")
 @Controller("cupom")
@@ -26,10 +22,7 @@ export class CupomController {
         private updateCupom: UpdateCupom,
         private findByTicket: FindCuponsByTicketId,
         private findByTicketAndCode: FindCuponsByTicketIdAndCode,
-        private findByEventId: FindCuponsByEventId,
-        private createCupomAudit: CreateCupomAudit,
-        private attachCupomTicket: AttachCupomTicket,
-        private dettachCupomTicket: DettachCupomTicket
+        private createCupomAudit: CreateCupomAudit
     ) { }
 
     @UseGuards(JwtAuthGuard, CanInsertCuponsGuard)
@@ -83,16 +76,11 @@ export class CupomController {
         return 'sucesso'
     }
 
-    @UseGuards(JwtAuthGuard, EnsureOwnerEvent)
+    @UseGuards(JwtAuthGuard, EnsureManagerEvent)
     @Post("attachTicket")
     async attachTicket(@Request() req, @Body() body: any) {
         const { userId: useruid } = req.user
         const { cupomId, ticketId } = body
-
-        await this.attachCupomTicket.execute({
-            cupomId,
-            ticketId
-        })
 
         await this.createCupomAudit.execute({
             useruid,
@@ -104,16 +92,11 @@ export class CupomController {
         return 'sucesso'
     }
 
-    @UseGuards(JwtAuthGuard, EnsureOwnerEvent)
+    @UseGuards(JwtAuthGuard, EnsureManagerEvent)
     @Delete("dettachTicket/:eventId")
     async dettachTicket(@Query() query, @Request() req) {
         const { userId: useruid } = req.user
         const { cupomId, ticketId } = query
-
-        await this.dettachCupomTicket.execute({
-            cupomId,
-            ticketId
-        })
 
         await this.createCupomAudit.execute({
             useruid,
@@ -150,17 +133,6 @@ export class CupomController {
 
         const { cupons } = await this.findByTicket.execute({
             ticketId
-        })
-
-        return { cupons: cupons.map(CupomViewModel.toHTTP) }
-    }
-
-    @UseGuards(JwtAuthGuard, EnsureManagerEvent)
-    @Get("findAllByEventId")
-    async findManyByEventId(@Query("eventId") eventId) {
-
-        const { cupons } = await this.findByEventId.execute({
-            eventId
         })
 
         return { cupons: cupons.map(CupomViewModel.toHTTP) }

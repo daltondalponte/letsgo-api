@@ -2,7 +2,6 @@ import { Module } from "@nestjs/common";
 import { PrismaService } from "./prisma/prisma.service";
 import { UserRepository } from "@application/user/repositories/user-repository";
 import { PrismaUserRepository } from "./prisma/repositories/user/prisma-user-repository";
-import { FirebaseService } from "./firebase/firebase.service";
 import { EventRepository } from "@application/event/repositories/event-repository";
 import { PrismaEventRepository } from "./prisma/repositories/event/prisma-event-repository";
 import { EstablishmentRepository } from "@application/establishment/repositories/establishment-repository";
@@ -27,7 +26,6 @@ import { PrismaTicketAuditRepository } from "./prisma/repositories/ticket-audit/
 @Module({
     providers: [
         PrismaService,
-        FirebaseService,
         {
             provide: UserRepository,
             useClass: PrismaUserRepository
@@ -77,7 +75,6 @@ import { PrismaTicketAuditRepository } from "./prisma/repositories/ticket-audit/
         UserRepository,
         PrismaService,
         EventRepository,
-        FirebaseService,
         EstablishmentRepository,
         TicketRepository,
         TicketTakerRepository,

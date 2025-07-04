@@ -44,7 +44,7 @@ export class PrismaTicketTakerRepository implements TicketTakerRepository {
     }
 
     async findById(id: string): Promise<TicketTaker> {
-        const ticketTaker = await this.prisma.ticketTaker.findUnique({
+        const ticketTaker = await this.prisma.ticketTaker.findFirst({
             where: {
                 userTicketTakerUid: id
             }
@@ -65,7 +65,7 @@ export class PrismaTicketTakerRepository implements TicketTakerRepository {
     }
 
     async findByUserTakerId(id: string): Promise<TicketTaker> {
-        const ticketTaker = await this.prisma.ticketTaker.findUnique({
+        const ticketTaker = await this.prisma.ticketTaker.findFirst({
             where: {
                 userTicketTakerUid: id
             }
@@ -76,8 +76,14 @@ export class PrismaTicketTakerRepository implements TicketTakerRepository {
         return PrismaTicketTackerMapper.toDomain(ticketTaker)
     }
 
-    userTicketTakerUid(userTicketTakerUid: string): Promise<TicketTaker[]> {
-        throw new Error("Method not implemented.");
+    async userTicketTakerUid(userTicketTakerUid: string): Promise<TicketTaker[]> {
+        const ticketTakers = await this.prisma.ticketTaker.findMany({
+            where: {
+                userTicketTakerUid
+            }
+        })
+        
+        return ticketTakers.map(PrismaTicketTackerMapper.toDomain)
     }
 
     save(Ticket: TicketTaker): Promise<TicketTaker> {

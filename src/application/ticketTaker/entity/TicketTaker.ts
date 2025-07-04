@@ -34,7 +34,7 @@ export class TicketTaker {
     }
 
     public set userOwnerUid(userOwnerUid: string) {
-        this.props.userTicketTakerUid = userOwnerUid;
+        this.props.userOwnerUid = userOwnerUid;
     }
 
     public get userOwnerUid(): string {

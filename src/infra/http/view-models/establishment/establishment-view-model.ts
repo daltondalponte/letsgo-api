@@ -9,7 +9,12 @@ export class EstablishmentViewModel {
             name: establishment?.name,
             address: establishment?.address,
             photos: establishment?.photos,
+            description: establishment?.description,
+            contactPhone: establishment?.contactPhone,
+            website: establishment?.website,
+            socialMedia: establishment?.socialMedia,
             coordinates: typeof establishment.coord === "string" ? JSON.parse(JSON.stringify(establishment?.coord)) : establishment.coord,
+            userOwnerUid: establishment?.userOwnerUid,
             createdAt: establishment?.createdAt,
             updatedAt: establishment?.updatedAt
         }

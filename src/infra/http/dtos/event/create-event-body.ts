@@ -54,7 +54,7 @@ export class EventBody {
     @ApiProperty()
     @IsArray()
     @IsString({ each: true })
-    @ArrayMinSize(1)
+    @IsOptional()
     photos: string[]
 
 }

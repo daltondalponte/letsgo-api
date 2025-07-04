@@ -1,5 +1,5 @@
 import { Type } from "class-transformer";
-import { ArrayMinSize, ValidateNested, IsArray, IsNotEmpty, IsString, IsObject, IsDefined, IsNotEmptyObject } from "class-validator";
+import { ArrayMinSize, ValidateNested, IsArray, IsNotEmpty, IsString, IsObject, IsDefined, IsNotEmptyObject, IsOptional } from "class-validator";
 import { ApiProperty } from "@nestjs/swagger"
 
 class Coord {
@@ -38,4 +38,22 @@ export class EstablishmentBody {
     @ArrayMinSize(1)
     photos: string[]
 
+    @ApiProperty()
+    @IsOptional()
+    @IsString()
+    description: string;
+
+    @ApiProperty()
+    @IsOptional()
+    @IsString()
+    contactPhone: string;
+
+    @ApiProperty()
+    @IsOptional()
+    @IsString()
+    website: string;
+
+    @ApiProperty()
+    @IsOptional()
+    socialMedia: any;
 }

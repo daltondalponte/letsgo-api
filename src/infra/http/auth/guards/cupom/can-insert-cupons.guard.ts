@@ -21,8 +21,6 @@ export class CanInsertCuponsGuard implements CanActivate {
     const userId = request.user?.userId;
     const permissaoValida = await this.permissionsService.canInsertCupons(eventId, userId)
 
-    console.log(permissaoValida);
-
     return permissaoValida;
   }
 }

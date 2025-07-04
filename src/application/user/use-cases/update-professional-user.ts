@@ -16,7 +16,6 @@ export class UpdateProfessional {
 
     async execute(request: AccountRequest): Promise<any> {
         const { data, uid } = request
-        console.log("aq", request)
         return await this.userRepository.save({ ...data, uid })
     }
 }

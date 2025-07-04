@@ -109,7 +109,17 @@ export class PrismaEventManagerRepository implements EventManagerRepository {
     }
 
     async findById(id: string): Promise<EventManager> {
-        throw new Error("Method not implemented.");
+        const eventManager = await this.prisma.eventsManager.findUnique({
+            where: {
+                id
+            }
+        });
+
+        if (!eventManager) {
+            return null;
+        }
+
+        return PrismaEventManagerMapper.toDomain(eventManager);
     }
 
     async save(eventManager: EventManager): Promise<void> {

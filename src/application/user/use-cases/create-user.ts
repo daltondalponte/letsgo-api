@@ -11,7 +11,9 @@ interface AccountRequest {
     avatar?: string;
     isOwnerOfEstablishment?: boolean;
     stripeAccountId?: string;
-    type: 'PERSONAL' | 'PROFESSIONAL' | 'TICKETTAKER'
+    phone?: string;
+    birthDate?: Date;
+    type: 'PERSONAL' | 'PROFESSIONAL_OWNER' | 'PROFESSIONAL_PROMOTER' | 'TICKETTAKER'
 }
 
 interface AccountResponse {
@@ -26,7 +28,7 @@ export class CreateUser {
     ) { }
 
     async execute(request: AccountRequest): Promise<AccountResponse> {
-        const { email, name, type, document, password, avatar, isOwnerOfEstablishment, stripeAccountId } = request
+        const { email, name, type, document, password, avatar, isOwnerOfEstablishment, stripeAccountId, phone, birthDate } = request
 
         const userAlreadyExists = await this.userRepository.findByEmail(email)
 
@@ -42,7 +44,9 @@ export class CreateUser {
             avatar,
             stripeAccountId,
             isOwnerOfEstablishment,
-            isActive: type === 'PROFESSIONAL' ? false : true,
+            phone,
+            birthDate,
+            isActive: type === 'PROFESSIONAL_OWNER' || type === 'PROFESSIONAL_PROMOTER' ? false : true,
             password
         })
 

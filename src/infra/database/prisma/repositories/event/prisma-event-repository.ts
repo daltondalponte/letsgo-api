@@ -4,12 +4,15 @@ import { EventRepository } from "@application/event/repositories/event-repositor
 import { Event } from "@application/event/entity/Event";
 import { PrismaEventMapper } from "../../mappers/event/prisma-event-mapper";
 import { EventApprovalRequest } from "@application/event-manager/use-cases/create-event-approval";
+import { EventViewModel } from '../../../../http/view-models/event/event-view-model';
+import { EventManagerRepository } from "@application/event-manager/repositories/event-manager-repository";
 
 @Injectable()
 export class PrismaEventRepository implements EventRepository {
 
     constructor(
-        private prisma: PrismaService
+        private prisma: PrismaService,
+        private eventManagerRepository: EventManagerRepository // injeção do repo de managers
     ) { }
 
 
@@ -29,12 +32,13 @@ export class PrismaEventRepository implements EventRepository {
 
             console.log("raw", rawEvent);
 
-            //if (rawEvent.establishmentId) delete rawEvent.useruid
+            // Remover campos que não devem ser passados diretamente
+            const { useruid, ...eventData } = rawEvent;
 
             await this.prisma.event.create({
                 data: {
-                    ...rawEvent,
-                    useruid: rawEvent.useruid
+                    ...eventData,
+                    useruid: useruid
                 }
             })
         } catch (error) {
@@ -62,18 +66,31 @@ export class PrismaEventRepository implements EventRepository {
             }
         })
 
-        return events.map(e => ({
-            ...PrismaEventMapper.toDomain(e),
-            eventApprovals: e?.EventApprovals,
-            establishment: e.establishment
-        }))
+        // Buscar administradores para cada evento
+        const eventsWithManagers = await Promise.all(events.map(async (e) => {
+            const event = PrismaEventMapper.toDomain(e);
+            // Buscar managers
+            const managersRaw = await this.eventManagerRepository.findByEventId(e.id);
+            const managers = managersRaw.map(m => ({ id: m.user.id, name: m.user.name }));
+            return {
+                ...EventViewModel.toHTTP(event),
+                eventApprovals: e?.EventApprovals,
+                establishment: e.establishment ? {
+                    id: e.establishment.id,
+                    name: e.establishment.name,
+                    address: e.establishment.address
+                } : null,
+                managers
+            };
+        }));
+        return eventsWithManagers;
     }
 
-    async findAll(): Promise<Event[]> {
+    async findAll(): Promise<any[]> {
         const events = await this.prisma.event.findMany({
             include: {
                 establishment: true,
-                Ticket: true, // Corrigido de 'tickets' para 'Ticket'
+                Ticket: true,
                 user: true,
             },
             orderBy: {
@@ -81,7 +98,11 @@ export class PrismaEventRepository implements EventRepository {
             }
         });
 
-        return events.map(PrismaEventMapper.toDomain);
+        return events.map(e => ({
+            ...PrismaEventMapper.toDomain(e),
+            user: e.user,
+            establishment: e.establishment
+        }));
     }
 
     async findByUserUid(uid: string): Promise<Event[]> {

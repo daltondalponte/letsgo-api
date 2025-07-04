@@ -16,10 +16,9 @@ import { UpdateUSer } from "@application/user/use-cases/update-user";
 import { FindAllProfessionals } from "@application/user/use-cases/find-all-professionals";
 import { EstablishmentViewModel } from "../view-models/establishment/establishment-view-model";
 import { UpdateProfessional } from "@application/user/use-cases/update-professional-user";
-import { StripeService } from "@infra/payment/stripe.service";
-import { FindUserById } from "@application/user/use-cases/find-user-by-id";
 import { SaveUserDeviceToken } from "@application/user/use-cases/upsert-device-token";
 import { FindAllCustomers } from "@application/user/use-cases/find-all-customers";
+import { FindUserById } from "@application/user/use-cases/find-user-by-id";
 
 @ApiTags("Usuário")
 @Controller('user')
@@ -38,13 +37,12 @@ export class UserController {
         private saveUser: SaveUser,
         private updateUserProfessional: UpdateProfessional,
         private createEstablishment: CreateEstablishment,
-        private stripeService: StripeService,
         private saveUserDeviceToken: SaveUserDeviceToken
     ) { }
 
     @Post('create')
     async create(@Body() body: UserBody) {
-        const { email, name, password, address, avatar, document, type, isOwnerOfEstablishment } = body
+        const { email, name, password, address, avatar, document, type, isOwnerOfEstablishment, phone, birthDate } = body
 
         const { user } = await this.createUser.execute({
             email,
@@ -54,6 +52,8 @@ export class UserController {
             avatar,
             document,
             isOwnerOfEstablishment,
+            phone,
+            birthDate,
             type
         })
 
@@ -71,6 +71,8 @@ export class UserController {
             document,
             type,
             isOwnerOfEstablishment,
+            phone,
+            birthDate,
             establishment
         } = body
 
@@ -82,71 +84,29 @@ export class UserController {
             avatar,
             document,
             isOwnerOfEstablishment,
+            phone,
+            birthDate,
             type
         })
 
         if (isOwnerOfEstablishment) {
-            const { address, coordinates, name } = establishment
+            const { address, coordinates, name, description, contactPhone, website, socialMedia } = establishment
 
             await this.createEstablishment.execute(
                 {
                     userOwnerUid: user.id,
                     address,
                     coordinates,
-                    name
+                    name,
+                    description,
+                    contactPhone,
+                    website,
+                    socialMedia
                 }
             )
         }
 
-        const stripAccount = await this.stripeService.createConnectAccount(email).catch(console.error)
-
-        if (stripAccount) {
-            await this.updateUserProfessional.execute({
-                data: {
-                    stripeAccountId: stripAccount?.id,
-                },
-                uid: user.uid
-            }).catch(console.error)
-        }
-
         return { user: UserViewModel.toHTTP(user) }
-    }
-
-    @UseGuards(JwtAuthGuard)
-    @Get('stripe-account-link')
-    async stripeAccountLink(@Req() req) {
-        const { userId: useruid, role } = req.user
-
-        if (role !== "PROFESSIONAL") throw new UnauthorizedException("Não permitido")
-
-        const { user } = await this.findUserById.execute({ id: useruid })
-
-        if (!user || !user?.stripeAccountId) throw new BadRequestException("Não encontrado, faça login novamente")
-        const account = await this.stripeService.retrieveAccount(user.stripeAccountId)
-
-        if (account.charges_enabled) {
-            return { message: "Cadastro completo" }
-        }
-
-        const accountLink = await this.stripeService.createAccountLink(user.stripeAccountId)
-
-        return { ...accountLink }
-    }
-
-    @UseGuards(JwtAuthGuard)
-    @Get('stripe-account-charges')
-    async stripeAccountCharges(@Req() req) {
-        const { userId: useruid, role } = req.user
-
-        if (role !== "PROFESSIONAL") throw new UnauthorizedException("Não permitido")
-
-        const { user } = await this.findUserById.execute({ id: useruid })
-
-        if (!user) throw new BadRequestException("Não encontrado")
-
-        const accountLink = await this.stripeService.retrieveAccount(user.stripeAccountId)
-
-        return { ...accountLink }
     }
 
     @UseGuards(JwtAuthGuard)
@@ -154,7 +114,7 @@ export class UserController {
     async createTaker(@Request() req, @Body() body: any) {
         const { userId: useruid, role } = req.user
 
-        if (role !== 'PROFESSIONAL') {
+        if (role !== 'PROFESSIONAL_OWNER') {
             throw new UnauthorizedException("Não permitido.")
         }
 
@@ -174,7 +134,7 @@ export class UserController {
     async findTakers(@Request() req) {
         const { userId, role } = req.user
 
-        if (role !== 'PROFESSIONAL') {
+        if (role !== 'PROFESSIONAL_OWNER') {
             throw new UnauthorizedException("Não permitido.")
         }
 
@@ -282,32 +242,6 @@ export class UserController {
         })
 
         return { message: 'sucesso' }
-    }
-
-    @UseGuards(JwtAuthGuard)
-    @Get('paymentMethods')
-    async findPaymentMethods(@Request() req) {
-        const { userId } = req.user
-        const { customerId } = req.query
-        const { user } = await this.findUserById.execute({ id: userId })
-
-        if (user.stripeCustomerId !== customerId) {
-            throw new UnauthorizedException("Não permitido!")
-        }
-
-        const paymentMethods = await this.stripeService.retrievePaymentMethods(customerId)
-
-        return paymentMethods
-    }
-
-    @UseGuards(JwtAuthGuard)
-    @Put('paymentMethods')
-    async detachPaymentMethod(@Request() req) {
-        const { userId } = req.user
-        const { paymentMethodId } = req.query
-        const paymentMethods = await this.stripeService.detachPaymentMethod(paymentMethodId)
-
-        return paymentMethods
     }
 
     @UseGuards(JwtAuthGuard)

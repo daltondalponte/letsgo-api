@@ -12,6 +12,10 @@ export interface EstablishmentProps {
     userOwnerUid: string,
     coordinates: Coord,
     photos: string[],
+    description?: string,
+    contactPhone?: string,
+    website?: string,
+    socialMedia?: any,
     createdAt: Date,
     updatedAt: Date
 }
@@ -72,6 +76,38 @@ export class Establishment {
 
     public get photos(): string[] {
         return this.props.photos;
+    }
+
+    public set description(description: string) {
+        this.props.description = description;
+    }
+
+    public get description(): string {
+        return this.props.description;
+    }
+
+    public set contactPhone(contactPhone: string) {
+        this.props.contactPhone = contactPhone;
+    }
+
+    public get contactPhone(): string {
+        return this.props.contactPhone;
+    }
+
+    public set website(website: string) {
+        this.props.website = website;
+    }
+
+    public get website(): string {
+        return this.props.website;
+    }
+
+    public set socialMedia(socialMedia: any) {
+        this.props.socialMedia = socialMedia;
+    }
+
+    public get socialMedia(): any {
+        return this.props.socialMedia;
     }
 
     public get createdAt(): Date {

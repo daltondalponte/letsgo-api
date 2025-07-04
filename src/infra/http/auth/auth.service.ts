@@ -254,7 +254,7 @@ export class AuthService {
             let stripeAccount: Stripe.Response<Stripe.Account> | null = null;
             let charges_enabled: boolean | null = null;
 
-            if (user.type === 'PROFESSIONAL') {
+            if (user.type === 'PROFESSIONAL_OWNER' || user.type === 'PROFESSIONAL_PROMOTER') {
                 if (user.stripeAccountId) {
                     try {
                         stripeAccount = await this.stripeService.retrieveAccount(user.stripeAccountId);
@@ -296,7 +296,7 @@ export class AuthService {
             }
 
             let establishmentDetails = null;
-            if (user.type === 'PROFESSIONAL') {
+            if (user.type === 'PROFESSIONAL_OWNER' || user.type === 'PROFESSIONAL_PROMOTER') {
                  const { establishment } = await this.userRepository.findByEmail(user.email);
                  if (establishment) {
                      establishmentDetails = EstablishmentViewModel.toHTTP(establishment);
@@ -357,13 +357,15 @@ export class AuthService {
     }
 
     async getTokens(userId: string, username: string, userRole: string) {
+        const payload = {
+            sub: userId,
+            username,
+            role: userRole
+        };
+        
         const [accessToken, refreshToken] = await Promise.all([
             this.jwtService.signAsync(
-                {
-                    sub: userId,
-                    username,
-                    role: userRole
-                },
+                payload,
                 {
                     secret: this.configService.get<string>('JWT_SECRET'),
                     expiresIn: '1h',

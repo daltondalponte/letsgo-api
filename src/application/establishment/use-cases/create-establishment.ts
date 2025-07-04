@@ -8,7 +8,11 @@ interface EstablishmentRequest {
     address: string,
     userOwnerUid: string,
     coordinates: Coord,
-    photos?: string[]
+    photos?: string[],
+    description?: string,
+    contactPhone?: string,
+    website?: string,
+    socialMedia?: any
 }
 
 interface EstablishmentResponse {
@@ -23,10 +27,10 @@ export class CreateEstablishment {
     ) { }
 
     async execute(request: EstablishmentRequest): Promise<EstablishmentResponse> {
-        const { address, coordinates, name, photos, userOwnerUid } = request
+        const { address, coordinates, name, photos, userOwnerUid, description, contactPhone, website, socialMedia } = request
 
         const establishment = new Establishment({
-            address, coordinates, name, photos, userOwnerUid
+            address, coordinates, name, photos, userOwnerUid, description, contactPhone, website, socialMedia
         })
 
         await this.establishmentRepository.create(establishment)

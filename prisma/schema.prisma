@@ -35,7 +35,8 @@ enum PaymentMethod {
 
 enum UserType {
   PERSONAL
-  PROFESSIONAL
+  PROFESSIONAL_OWNER
+  PROFESSIONAL_PROMOTER
   TICKETTAKER
   MASTER
 }
@@ -103,7 +104,9 @@ model User {
   isActive               Boolean
   resetToken             String?
   type                   UserType         @default(PERSONAL)
-  TicketTacker           TicketTaker[]
+  phone                  String?
+  birthDate              DateTime?
+  TicketTaker           TicketTaker[]
   Payment                Payment[]
   createdAt              DateTime         @default(now())
   updatedAt              DateTime         @updatedAt
@@ -127,6 +130,10 @@ model Establishment {
   name         String
   coordinates  Json
   address      String?
+  description  String?
+  contactPhone String?
+  website      String?
+  socialMedia  Json?
   userOwner    User     @relation(fields: [userOwnerUid], references: [uid])
   userOwnerUid String
   photos       String[]
@@ -242,10 +249,11 @@ model TicketTaker {
   id                 String   @id @default(uuid())
   userOwner          User     @relation(fields: [userOwnerUid], references: [uid])
   userOwnerUid       String
-  userTicketTakerUid String   @unique
+  userTicketTakerUid String
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
+  @@unique([userOwnerUid, userTicketTakerUid])
   @@index([id, userOwnerUid, userTicketTakerUid])
   @@map("ticket_takers")
 }

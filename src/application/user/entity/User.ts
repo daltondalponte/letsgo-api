@@ -1,7 +1,7 @@
 import { randomUUID } from "crypto";
 import { Replace } from "@helpers/Replace";
 
-export type AccountRole = 'PERSONAL' | 'PROFESSIONAL' | 'TICKETTAKER' | 'MASTER'
+export type AccountRole = 'PERSONAL' | 'PROFESSIONAL_OWNER' | 'PROFESSIONAL_PROMOTER' | 'TICKETTAKER' | 'MASTER'
 
 export interface UserProps {
     name: string;
@@ -15,6 +15,8 @@ export interface UserProps {
     resetToken?: string;
     stripeAccountId?: string;
     stripeCustomerId?: string;
+    phone?: string;
+    birthDate?: Date;
     type: AccountRole;
     createdAt: Date;
     updatedAt: Date;
@@ -135,6 +137,22 @@ export class User {
 
     public get updatedAt(): Date {
         return this.props.updatedAt;
+    }
+
+    public set phone(phone: string) {
+        this.props.phone = phone
+    }
+
+    public get phone(): string {
+        return this.props.phone;
+    }
+
+    public set birthDate(birthDate: Date) {
+        this.props.birthDate = birthDate
+    }
+
+    public get birthDate(): Date {
+        return this.props.birthDate;
     }
 
 }
