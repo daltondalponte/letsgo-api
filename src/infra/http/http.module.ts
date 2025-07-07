@@ -66,6 +66,12 @@ import { FindEventManagerByEventId } from '@application/event-manager/use-cases/
 import { FindEventManagerById } from '@application/event-manager/use-cases/find-event-manager-by-id';
 import { DeleteEventManager } from '@application/event-manager/use-cases/delete-event-manager';
 import { UpdateEventManager } from '@application/event-manager/use-cases/update-event-manager';
+import { FindPendingApprovals } from '@application/event/use-cases/find-pending-approvals';
+import { ApproveEvent } from '@application/event/use-cases/approve-event';
+import { RejectEvent } from '@application/event/use-cases/reject-event';
+import { TicketController } from './controllers/ticket.controller';
+import { CreateTicket } from '@application/ticket/use-cases/create-ticket';
+import { DeleteTicket } from '@application/ticket/use-cases/delete-ticket';
 
 @Module({
     imports: [DataBaseModule, AuthModule, MailModule],
@@ -77,7 +83,8 @@ import { UpdateEventManager } from '@application/event-manager/use-cases/update-
         WebHookController,
         AdminController, // Adicione AdminController aqui
         EventController,
-        EventManagerController
+        EventManagerController,
+        TicketController
     ],
     providers: [
         CreateUser,
@@ -102,6 +109,7 @@ import { UpdateEventManager } from '@application/event-manager/use-cases/update-
         UpdateEventTakers,
         UpdateEventListNames,
         FindEventById,
+        FindEstablishmentByUserUid,
         FindEventsByUserUidOrEstablishmentId,
         CreateEstablishment,
         FindEstablishmentByUserUid,
@@ -135,8 +143,13 @@ import { UpdateEventManager } from '@application/event-manager/use-cases/update-
         FindEventManagerById,
         DeleteEventManager,
         UpdateEventManager,
+        FindPendingApprovals,
+        ApproveEvent,
+        RejectEvent,
         CreateUser,
-        DeleteUserById
+        DeleteUserById,
+        CreateTicket,
+        DeleteTicket
     ]
 })
 

@@ -10,11 +10,17 @@ interface EventRequest {
     coordinates_event?: Coord;
     establishmentId?: string;
     dateTimestamp: string;
+    endTimestamp?: string;
     description: string;
     ticketTakers?: string[]
     listNames?: string[]
     photos: string[]
     isActive: boolean
+    tickets?: Array<{
+        category: string;
+        price: number;
+        quantity: number;
+    }>
 }
 
 interface EventResponse {
@@ -31,11 +37,12 @@ export class CreateEvent {
 
     async execute(request: EventRequest): Promise<EventResponse> {
 
-        const { dateTimestamp, description, photos, address, establishmentId, useruid, coordinates_event, listNames, ticketTakers, name, isActive } = request
+        const { dateTimestamp, endTimestamp, description, photos, address, establishmentId, useruid, coordinates_event, listNames, ticketTakers, name, isActive, tickets } = request
 
         const event = new Event({
             name,
             dateTimestamp,
+            endTimestamp,
             description,
             photos,
             listNames,
@@ -47,7 +54,7 @@ export class CreateEvent {
             coordinates_event
         })
 
-        await this.eventRepository.create(event)
+        await this.eventRepository.create(event, tickets)
 
         return { event }
     }

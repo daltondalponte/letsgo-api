@@ -2,7 +2,7 @@ import { Event } from "@application/event/entity/Event";
 
 export class EventViewModel {
 
-    static toHTTP(event: Event) {
+    static toHTTP(event: Event & { managers?: any[], tickets?: any[] }) {
         return {
             id: event.id,
             name: event.name,
@@ -16,7 +16,9 @@ export class EventViewModel {
             establishmentId: event.establishmentId,
             createdAt: event.createdAt,
             updatedAt: event.updatedAt,
-            isActive: event.isActive
+            isActive: event.isActive,
+            managers: event.managers || [],
+            tickets: event.tickets || []
         }
     }
 }

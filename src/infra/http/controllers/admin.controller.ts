@@ -507,19 +507,12 @@ export class AdminController {
                 where: { email: body.email }
             });
 
-            console.log('=== DEBUG CREATE TICKETTAKER ===');
-            console.log('Email procurado:', body.email);
-            console.log('Usuário existente:', existingUser);
-            console.log('Tipo do usuário existente:', existingUser?.type);
-
             if (existingUser) {
                 // Se o usuário existe mas não é TICKETTAKER, retornar erro
                 if (existingUser.type !== 'TICKETTAKER') {
-                    console.log('Usuário existe mas não é TICKETTAKER, retornando erro');
                     throw new Error('Este email já está sendo usado por outro tipo de usuário.');
                 }
 
-                console.log('Usuário é TICKETTAKER, verificando se já está vinculado');
                 // Se já é TICKETTAKER, verificar se já está vinculado ao usuário atual
                 const existingTicketTaker = await this.prisma.ticketTaker.findFirst({
                     where: {
@@ -528,26 +521,19 @@ export class AdminController {
                     }
                 });
 
-                console.log('Associação existente:', existingTicketTaker);
-
                 if (existingTicketTaker) {
-                    console.log('Usuário já está vinculado, retornando erro');
                     throw new Error('Este administrador já está vinculado ao seu perfil.');
                 }
 
-                console.log('TICKETTAKER já existe, retornando erro para orientar o usuário');
                 throw new Error('Este administrador já existe no sistema. Use o botão "Buscar Existentes" para vincular um administrador já cadastrado.');
             }
 
-            console.log('Usuário não existe, criando novo TICKETTAKER');
             // Se não existe, criar novo TICKETTAKER
             const { user } = await this.createTicketTakerUseCase.execute({
                 userOwnerUid: userId,
                 name: body.name,
                 email: body.email
             });
-
-            console.log('Novo TICKETTAKER criado:', user);
             return {
                 message: 'Administrador criado com sucesso!',
                 user: {
@@ -583,6 +569,80 @@ export class AdminController {
     }
 
     @UseGuards(JwtAuthGuard)
+    @Get('users/check-unlink/:id')
+    async checkUnlinkTicketTaker(@Param("id") id: string, @Req() req) {
+        const { type, userId, uid } = req.user;
+        const userOwnerUid = userId || uid;
+
+        // Permitir acesso para MASTER e usuários profissionais
+        if (type !== "MASTER" && type !== "PROFESSIONAL_OWNER" && type !== "PROFESSIONAL_PROMOTER") {
+            throw new UnauthorizedException("Acesso negado.");
+        }
+
+        try {
+            // Se não for MASTER, verificar se o TICKETTAKER pertence ao usuário
+            if (type !== "MASTER") {
+                try {
+                    const { users } = await this.findTicketsTakerByOwner.execute({ userOwnerUid });
+                    const userExists = users.find(u => u.id === id || u.uid === id);
+                    
+                    if (!userExists) {
+                        throw new UnauthorizedException("Não permitido verificar este administrador.");
+                    }
+                } catch (error) {
+                    console.error('Erro ao verificar permissão:', error);
+                    throw new UnauthorizedException("Erro ao verificar permissões.");
+                }
+            }
+
+            // Buscar o usuário TICKETTAKER para obter o email
+            const ticketTakerUser = await this.prisma.user.findUnique({
+                where: { uid: id }
+            });
+
+            if (!ticketTakerUser) {
+                throw new Error('Usuário TICKETTAKER não encontrado.');
+            }
+
+            // Buscar todos os eventos onde este TICKETTAKER está associado
+            const eventsWithTicketTaker = await this.prisma.event.findMany({
+                where: {
+                    ticketTakers: {
+                        has: ticketTakerUser.email
+                    }
+                },
+                select: {
+                    id: true,
+                    name: true,
+                    dateTimestamp: true
+                }
+            });
+
+            return {
+                ticketTaker: {
+                    id: ticketTakerUser.uid,
+                    name: ticketTakerUser.name,
+                    email: ticketTakerUser.email
+                },
+                eventsAffected: eventsWithTicketTaker,
+                totalEventsAffected: eventsWithTicketTaker.length,
+                warning: eventsWithTicketTaker.length > 0 
+                    ? `Este administrador está associado a ${eventsWithTicketTaker.length} evento(s). Ao desvinculá-lo, ele será removido de todos os eventos automaticamente.`
+                    : "Este administrador não está associado a nenhum evento."
+            };
+
+        } catch (error) {
+            console.error('Erro ao verificar ticket taker:', error);
+            
+            if (error.message.includes('Usuário TICKETTAKER não encontrado')) {
+                throw new BadRequestException('Usuário TICKETTAKER não encontrado no sistema.');
+            }
+            
+            throw new InternalServerErrorException('Erro interno do servidor');
+        }
+    }
+
+    @UseGuards(JwtAuthGuard)
     @Delete('users/unlink/:id')
     async unlinkTicketTaker(@Param("id") id: string, @Req() req) {
         const { type, userId, uid } = req.user;
@@ -609,6 +669,15 @@ export class AdminController {
                 }
             }
 
+            // Buscar o usuário TICKETTAKER para obter o email
+            const ticketTakerUser = await this.prisma.user.findUnique({
+                where: { uid: id }
+            });
+
+            if (!ticketTakerUser) {
+                throw new Error('Usuário TICKETTAKER não encontrado.');
+            }
+
             // Encontrar e deletar apenas a associação TicketTaker
             const ticketTaker = await this.prisma.ticketTaker.findFirst({
                 where: {
@@ -621,18 +690,93 @@ export class AdminController {
                 throw new Error('Associação não encontrada.');
             }
 
+            // DEBUG LOGS
+            console.log('TicketTaker a desvincular:', ticketTakerUser.email, ticketTakerUser.uid);
+
+            // Buscar todos os eventos onde este TICKETTAKER está associado (pelo email no array)
+            const eventsWithTicketTaker = await this.prisma.event.findMany({
+                where: {
+                    ticketTakers: {
+                        has: ticketTakerUser.email
+                    }
+                }
+            });
+
+            console.log('Eventos encontrados para esse TicketTaker (pelo email):', eventsWithTicketTaker.map(e => ({ id: e.id, ticketTakers: e.ticketTakers })));
+
+            // Remover o TICKETTAKER de todos os eventos onde está associado (pelo array)
+            for (const event of eventsWithTicketTaker) {
+                const updatedTicketTakers = event.ticketTakers.filter(
+                    (takerEmail: string) => takerEmail !== ticketTakerUser.email
+                );
+
+                await this.prisma.event.update({
+                    where: { id: event.id },
+                    data: {
+                        ticketTakers: updatedTicketTakers
+                    }
+                });
+            }
+
+            // Remover todas as associações na tabela eventsReceptionist para esse TicketTaker
+            const allEventManagers = await this.prisma.eventsReceptionist.findMany({
+                where: { useruid: id }
+            });
+
+            console.log('Associações na tabela eventsReceptionist antes da deleção:', allEventManagers.map(e => ({ id: e.id, eventId: e.eventId, useruid: e.useruid })));
+
+            const deleteResult = await this.prisma.eventsReceptionist.deleteMany({
+                where: { useruid: id }
+            });
+
+            console.log('Total de vínculos removidos da tabela eventsReceptionist:', deleteResult.count);
+
+            // Para cada evento afetado, atualizar o campo ticketTakers
+            for (const eventManager of allEventManagers) {
+                // Buscar todos os vínculos ativos na tabela eventsReceptionist para esse evento
+                const managers = await this.prisma.eventsReceptionist.findMany({
+                    where: { eventId: eventManager.eventId },
+                    include: { user: true }
+                });
+
+                // Atualizar o campo ticketTakers do evento
+                const ticketTakers = managers.map(m => m.user.email);
+                await this.prisma.event.update({
+                    where: { id: eventManager.eventId },
+                    data: { ticketTakers }
+                });
+            }
+
+            // Verificar se ainda há vínculos após a deleção
+            const allEventManagersAfter = await this.prisma.eventsReceptionist.findMany({
+                where: { useruid: id }
+            });
+
+            console.log('Associações na tabela eventsReceptionist após deleção:', allEventManagersAfter.map(e => ({ id: e.id, eventId: e.eventId, useruid: e.useruid })));
+
             // Deletar apenas a associação, não o usuário
             await this.prisma.ticketTaker.delete({
                 where: { id: ticketTaker.id }
             });
 
-            return { message: 'Administrador desvinculado com sucesso!' };
+            return { 
+                message: 'Administrador desvinculado com sucesso!',
+                eventsUpdated: eventsWithTicketTaker.length,
+                ticketTakerRemoved: {
+                    name: ticketTakerUser.name,
+                    email: ticketTakerUser.email
+                }
+            };
 
         } catch (error) {
             console.error('Erro ao desvincular ticket taker:', error);
             
             if (error.message.includes('Associação não encontrada')) {
                 throw new BadRequestException('Associação não encontrada no sistema.');
+            }
+            
+            if (error.message.includes('Usuário TICKETTAKER não encontrado')) {
+                throw new BadRequestException('Usuário TICKETTAKER não encontrado no sistema.');
             }
             
             throw new InternalServerErrorException('Erro interno do servidor');

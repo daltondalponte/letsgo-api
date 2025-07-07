@@ -205,7 +205,7 @@ async function createTestUsers() {
 
     // 11. Criar EventManager para o PROFESSIONAL_PROMOTER
     console.log('📋 Criando EventManager para o PROFESSIONAL_PROMOTER...');
-    const eventManager = await prisma.eventsManager.upsert({
+    const eventManager = await prisma.eventsReceptionist.upsert({
       where: { id: 'manager-001' },
       update: {},
       create: {

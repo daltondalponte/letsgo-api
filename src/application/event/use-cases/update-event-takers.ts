@@ -19,14 +19,23 @@ export class UpdateEventTakers {
     async execute(request: EventRequest): Promise<void> {
         const { ticketTakers, id, establishmentId } = request
 
+        console.log('--- [UpdateEventTakers] Chamada recebida ---');
+        console.log('Evento ID:', id);
+        console.log('EstablishmentId:', establishmentId);
+        console.log('TicketTakers recebidos:', ticketTakers);
+
         const event = await this.eventRepository.findById(id)
 
         if (event.establishmentId !== establishmentId) {
             throw new UnauthorizedException("Acesso negado!")
         }
 
+        // Remove duplicidade do array recebido
+        const uniqueTakers = Array.from(new Set(ticketTakers));
+        console.log('TicketTakers a serem salvos:', uniqueTakers);
+
         const eventToEdit = new Event({
-            ticketTakers,
+            ticketTakers: uniqueTakers,
             dateTimestamp: event.dateTimestamp,
             description: event.description,
             name: event.name,
@@ -41,5 +50,6 @@ export class UpdateEventTakers {
         }, event.id)
 
         await this.eventRepository.save(eventToEdit)
+        console.log('--- [UpdateEventTakers] Evento salvo ---');
     }
 }

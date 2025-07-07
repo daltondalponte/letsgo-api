@@ -315,4 +315,12 @@ export class PrismaTicketRepository implements TicketRepository {
         })
     }
 
+    async delete(id: string): Promise<void> {
+        await this.prisma.ticket.delete({
+            where: {
+                id
+            }
+        })
+    }
+
 }

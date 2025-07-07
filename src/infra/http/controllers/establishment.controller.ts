@@ -127,4 +127,33 @@ export class EstablishmentController {
 
         return { establishments: availableEstablishments.map(EstablishmentViewModel.toHTTP) }
     }
+
+    @UseGuards(JwtAuthGuard)
+    @Get("search-for-promoters")
+    async searchEstablishmentsForPromoters(@Request() req, @Query('query') query: string) {
+        const { type } = req.user;
+        
+        // Apenas promoters podem acessar este endpoint
+        if (type !== "PROFESSIONAL_PROMOTER") {
+            return { establishments: [] };
+        }
+
+        if (!query || query.trim().length < 2) {
+            return { establishments: [] };
+        }
+
+        const { establishments } = await this.findAllEstablishments.execute()
+
+        // Filtrar estabelecimentos que correspondem à busca
+        const filteredEstablishments = establishments.filter(est => {
+            const searchTerm = query.toLowerCase();
+            return (
+                est.name.toLowerCase().includes(searchTerm) ||
+                est.address?.toLowerCase().includes(searchTerm) ||
+                est.description?.toLowerCase().includes(searchTerm)
+            );
+        });
+
+        return { establishments: filteredEstablishments.map(EstablishmentViewModel.toHTTP) }
+    }
 }

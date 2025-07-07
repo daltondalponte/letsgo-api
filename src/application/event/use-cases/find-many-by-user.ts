@@ -4,7 +4,8 @@ import { EventRepository } from "../repositories/event-repository";
 
 interface EventRequest {
     useruid?: string;
-    establishmentId?: string
+    establishmentId?: string;
+    approvedOnly?: boolean;
 }
 
 interface EventResponse {
@@ -19,9 +20,9 @@ export class FindEventsByUserUidOrEstablishmentId {
     ) { }
 
     async execute(request: EventRequest): Promise<EventResponse> {
-        const { establishmentId, useruid } = request
+        const { establishmentId, useruid, approvedOnly } = request
 
-        const events = await this.eventRepository.findManyByUserUidOrEstablishmentId(useruid, establishmentId)
+        const events = await this.eventRepository.findManyByUserUidOrEstablishmentId(useruid, establishmentId, approvedOnly)
 
         return { events }
     }

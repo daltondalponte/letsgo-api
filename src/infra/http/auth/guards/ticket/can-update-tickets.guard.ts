@@ -9,19 +9,14 @@ export class CanUpdateticketsGuard implements CanActivate {
     private permissionsService: PermissionsService,
   ) { }
 
-  async canActivate(
-    context: ExecutionContext,
-  ): Promise<boolean> {
-
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
+    const user = request.user;
+    const body = request.body;
 
-    if (Object.values(request.body).some((value: any) => !String(value).length)) return false
-    const eventId = request.body?.eventId ?? request.params?.eventId;
+    const eventId = body.eventId;
+    const userId = user.userId;
 
-    if (!eventId) return false
-    const userId = request.user?.userId;
-    const permissaoValida = await this.permissionsService.canUpdateTickets(eventId, userId)
-
-    return permissaoValida;
+    return this.permissionsService.canUpdateTickets(eventId, userId);
   }
 }

@@ -1,6 +1,6 @@
 
 import { EventManager } from "@application/event-manager/entity/EventManager";
-import { EventsManager as RawEventManager } from "@prisma/client";
+import { EventsReceptionist as RawEventManager } from "@prisma/client";
 
 export class PrismaEventManagerMapper {
     static toPrisma(eventManager: EventManager) {

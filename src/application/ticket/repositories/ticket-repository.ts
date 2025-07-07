@@ -14,4 +14,5 @@ export abstract class TicketRepository {
     abstract findAll(): Promise<any[]>; // Adicionado para a Dashboard Master
     abstract save(ticket: Ticket): Promise<void>;
     abstract savePurchase(id: string): Promise<void>;
+    abstract delete(id: string): Promise<void>;
 }

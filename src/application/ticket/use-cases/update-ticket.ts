@@ -32,22 +32,44 @@ export class UpdateTicket {
         const ticket = await this.ticketRepository.findById(id)
 
         const { event } = await this.findEvent.execute({ id: eventId })
-        const { establishment } = await this.findEstablishment.execute({ useruid })
+        
+        // Verificar se o usuário é o dono do evento
+        if (event.useruid === useruid) {
+            // Dono do evento pode atualizar tickets
+            const updatedTicket = new Ticket({
+                description: ticket.description,
+                eventId: ticket.eventId,
+                createdAt: ticket.createdAt,
+                price,
+                quantity_available
+            }, ticket.id)
 
-        if (event.establishmentId !== establishment.id) {
-            throw new UnauthorizedException("Acesso negado!")
+            await this.ticketRepository.save(updatedTicket)
+            return { ticket: updatedTicket }
         }
 
-        const updatedTicket = new Ticket({
-            description: ticket.description,
-            eventId: ticket.eventId,
-            createdAt: ticket.createdAt,
-            price,
-            quantity_available
-        }, ticket.id)
+        // Se não for o dono do evento, verificar se é dono do estabelecimento
+        try {
+            const { establishment } = await this.findEstablishment.execute({ useruid })
 
-        await this.ticketRepository.save(updatedTicket)
+            if (event.establishmentId !== establishment.id) {
+                throw new UnauthorizedException("Acesso negado!")
+            }
 
-        return { ticket: updatedTicket }
+            const updatedTicket = new Ticket({
+                description: ticket.description,
+                eventId: ticket.eventId,
+                createdAt: ticket.createdAt,
+                price,
+                quantity_available
+            }, ticket.id)
+
+            await this.ticketRepository.save(updatedTicket)
+
+            return { ticket: updatedTicket }
+        } catch (error) {
+            // Se não conseguir verificar o estabelecimento, negar acesso
+            throw new UnauthorizedException("Acesso negado!")
+        }
     }
 }

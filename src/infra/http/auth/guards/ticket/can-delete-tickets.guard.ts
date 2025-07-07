@@ -3,7 +3,7 @@ import { Observable } from 'rxjs';
 import { PermissionsService } from '../../permissions.service';
 
 @Injectable()
-export class CanInsertTicketsGuard implements CanActivate {
+export class CanDeleteTicketsGuard implements CanActivate {
 
   constructor(
     private permissionsService: PermissionsService,
@@ -15,20 +15,13 @@ export class CanInsertTicketsGuard implements CanActivate {
 
     const request = context.switchToHttp().getRequest();
 
-    if (Object.values(request.body).some((value: any) => !String(value).length)) {
-      return false;
-    }
-    
-    const eventId = request.body?.eventId ?? request.params?.eventId;
+    if (Object.values(request.params).some((value: any) => !String(value).length)) return false
+    const ticketId = request.params?.id;
 
-    if (!eventId) {
-      return false;
-    }
-    
+    if (!ticketId) return false
     const userId = request.user?.userId;
-    
-    const permissaoValida = await this.permissionsService.canInsertTickets(eventId, userId);
+    const permissaoValida = await this.permissionsService.canDeleteTickets(ticketId, userId)
 
     return permissaoValida;
   }
-}
+} 

@@ -13,6 +13,7 @@ export class PrismaEventMapper {
             listNames: event.listNames || [],
             ticketTakers: event.ticketTakers || [],
             dateTimestamp: event.dateTimestamp,
+            endTimestamp: event.endTimestamp || null,
             description: event.description,
             establishmentId: event.establishmentId || null,
             photos: event.photos || [],
@@ -26,6 +27,7 @@ export class PrismaEventMapper {
         return new Event({
             name: rawEvent.name,
             dateTimestamp: rawEvent.dateTimestamp.toISOString(),
+            endTimestamp: rawEvent.endTimestamp ? rawEvent.endTimestamp.toISOString() : undefined,
             coordinates_event: rawEvent.coordinates_event ? JSON.parse(rawEvent.coordinates_event as string) : undefined,
             listNames: rawEvent.listNames || undefined,
             ticketTakers: rawEvent.ticketTakers || undefined,

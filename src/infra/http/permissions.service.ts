@@ -8,74 +8,48 @@ export class PermissionsService {
         private readonly prisma: PrismaService
     ) { }
 
-    // Verificar se o owner pode gerenciar eventos de promoters
-    async canOwnerManagePromoterEvent(eventId: string, userId: string): Promise<boolean> {
-        const event = await this.prisma.event.findUnique({
-            where: { id: eventId },
-            include: { user: true }
-        });
-
-        if (!event) {
-            return false;
-        }
-
-        // Se o usuário não é o dono do evento, verificar se é owner do estabelecimento
-        if (event.useruid !== userId && event.establishmentId) {
-            const establishment = await this.prisma.establishment.findUnique({
-                where: { id: event.establishmentId }
-            });
-            
-            if (establishment && establishment.userOwnerUid === userId) {
-                // Verificar se o criador do evento é um promoter
-                if (event.user.type === 'PROFESSIONAL_PROMOTER') {
-                    // Owner não pode gerenciar eventos de promoters
-                    return false;
-                }
-                return true;
-            }
-        }
-
-        return false;
-    }
-
     async canInsertTickets(eventId: string, userId: string): Promise<boolean> {
         const event = await this.prisma.event.findUnique({
-            where: { id: eventId },
-            include: { user: true }
+            where: { id: eventId }
         });
 
         if (!event) {
             return false;
         }
+
+        console.log('=== DEBUG canInsertTickets ===');
+        console.log('Event:', event);
+        console.log('Event.establishmentId:', event.establishmentId);
+        console.log('UserId:', userId);
 
         // Se o usuário é o dono do evento, permitir
         if (event.useruid === userId) {
+            console.log('Usuário é dono do evento - PERMITIDO');
             return true;
         }
 
-        // Se o usuário é o owner do estabelecimento, verificar se pode gerenciar
+        // Se o usuário é o owner do estabelecimento, permitir
         if (event.establishmentId) {
+            console.log('Buscando establishment com ID:', event.establishmentId);
             const establishment = await this.prisma.establishment.findUnique({
                 where: { id: event.establishmentId }
             });
+            console.log('Establishment encontrado:', establishment);
             
             if (establishment && establishment.userOwnerUid === userId) {
-                // Owner não pode alterar tickets de eventos de promoters
-                if (event.user.type === 'PROFESSIONAL_PROMOTER') {
-                    return false;
-                }
+                console.log('Usuário é owner do estabelecimento - PERMITIDO');
                 return true;
             }
         }
 
         // Recepcionistas não podem alterar dados de eventos (só usam app mobile)
+        console.log('Usuário não tem permissão - NEGADO');
         return false;
     }
 
     async canUpdateTickets(eventId: string, userId: string): Promise<boolean> {
         const event = await this.prisma.event.findUnique({
-            where: { id: eventId },
-            include: { user: true }
+            where: { id: eventId }
         });
 
         if (!event) {
@@ -87,15 +61,11 @@ export class PermissionsService {
             return true;
         }
 
-        // Se o usuário é o owner do estabelecimento, verificar se pode gerenciar
+        // Se o usuário é o owner do estabelecimento, permitir
         const establishment = await this.prisma.establishment.findUnique({
             where: { id: event.establishmentId }
         });
         if (establishment && establishment.userOwnerUid === userId) {
-            // Owner não pode alterar tickets de eventos de promoters
-            if (event.user.type === 'PROFESSIONAL_PROMOTER') {
-                return false;
-            }
             return true;
         }
 
@@ -114,8 +84,7 @@ export class PermissionsService {
 
         // Verificar se o usuário é o dono do evento
         const event = await this.prisma.event.findUnique({
-            where: { id: ticket.eventId },
-            include: { user: true }
+            where: { id: ticket.eventId }
         });
 
         if (!event) return false;
@@ -125,15 +94,11 @@ export class PermissionsService {
             return true;
         }
 
-        // Se o usuário é o owner do estabelecimento, verificar se pode gerenciar
+        // Se o usuário é o owner do estabelecimento, permitir
         const establishment = await this.prisma.establishment.findUnique({
             where: { id: event.establishmentId }
         });
         if (establishment && establishment.userOwnerUid === userId) {
-            // Owner não pode alterar tickets de eventos de promoters
-            if (event.user.type === 'PROFESSIONAL_PROMOTER') {
-                return false;
-            }
             return true;
         }
 
@@ -143,8 +108,7 @@ export class PermissionsService {
 
     async canInsertCupons(eventId: string, userId: string): Promise<boolean> {
         const event = await this.prisma.event.findUnique({
-            where: { id: eventId },
-            include: { user: true }
+            where: { id: eventId }
         });
 
         if (!event) {
@@ -156,15 +120,11 @@ export class PermissionsService {
             return true;
         }
 
-        // Se o usuário é o owner do estabelecimento, verificar se pode gerenciar
+        // Se o usuário é o owner do estabelecimento, permitir
         const establishment = await this.prisma.establishment.findUnique({
             where: { id: event.establishmentId }
         });
         if (establishment && establishment.userOwnerUid === userId) {
-            // Owner não pode alterar cupons de eventos de promoters
-            if (event.user.type === 'PROFESSIONAL_PROMOTER') {
-                return false;
-            }
             return true;
         }
 
@@ -174,8 +134,7 @@ export class PermissionsService {
 
     async isManagerOfEvent(eventId: string, userId: string): Promise<boolean> {
         const event = await this.prisma.event.findUnique({
-            where: { id: eventId },
-            include: { user: true }
+            where: { id: eventId }
         });
 
         if (!event) {
@@ -187,15 +146,11 @@ export class PermissionsService {
             return true;
         }
 
-        // Se o usuário é o owner do estabelecimento, verificar se pode gerenciar
+        // Se o usuário é o owner do estabelecimento, é considerado manager
         const establishment = await this.prisma.establishment.findUnique({
             where: { id: event.establishmentId }
         });
         if (establishment && establishment.userOwnerUid === userId) {
-            // Owner não pode gerenciar eventos de promoters
-            if (event.user.type === 'PROFESSIONAL_PROMOTER') {
-                return false;
-            }
             return true;
         }
 
@@ -225,8 +180,7 @@ export class PermissionsService {
 
     async canUpdateCupons(eventId: string, userId: string): Promise<boolean> {
         const event = await this.prisma.event.findUnique({
-            where: { id: eventId },
-            include: { user: true }
+            where: { id: eventId }
         });
 
         if (!event) {
@@ -238,15 +192,11 @@ export class PermissionsService {
             return true;
         }
 
-        // Se o usuário é o owner do estabelecimento, verificar se pode gerenciar
+        // Se o usuário é o owner do estabelecimento, permitir
         const establishment = await this.prisma.establishment.findUnique({
             where: { id: event.establishmentId }
         });
         if (establishment && establishment.userOwnerUid === userId) {
-            // Owner não pode alterar cupons de eventos de promoters
-            if (event.user.type === 'PROFESSIONAL_PROMOTER') {
-                return false;
-            }
             return true;
         }
 
@@ -256,4 +206,4 @@ export class PermissionsService {
 
     // TODO OTHER PERMISSIONS REQUIRED TO MANAGER
 
-}
+} 

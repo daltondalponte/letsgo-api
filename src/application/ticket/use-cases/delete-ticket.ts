@@ -1,25 +1,16 @@
 import { Injectable } from "@nestjs/common";
 import { TicketRepository } from "../repositories/ticket-repository";
-import { Ticket } from "../entity/Ticket";
 import { FindEventById } from "@application/event/use-cases/find-event-by-id";
 import { FindEstablishmentByUserUid } from "@application/establishment/use-cases/find-many-by-user";
 import { UnauthorizedException } from "@nestjs/common";
 
-
 interface TicketRequest {
-    description: string;
-    price: number;
-    eventId: string;
-    quantity_available: number;
+    id: string;
     useruid: string;
 }
 
-interface TicketResponse {
-    ticket: Ticket
-}
-
 @Injectable()
-export class CreateTicket {
+export class DeleteTicket {
 
     constructor(
         private ticketRepository: TicketRepository,
@@ -27,20 +18,18 @@ export class CreateTicket {
         private findEstablishment: FindEstablishmentByUserUid
     ) { }
 
-    async execute(request: TicketRequest): Promise<TicketResponse> {
-        const { description, eventId, price, quantity_available, useruid } = request
+    async execute(request: TicketRequest): Promise<void> {
+        const { id, useruid } = request
 
-        // Verificar se o usuário é o dono do evento
-        const { event } = await this.findEvent.execute({ id: eventId })
+        const ticket = await this.ticketRepository.findById(id)
+
+        const { event } = await this.findEvent.execute({ id: ticket.eventId })
         
+        // Verificar se o usuário é o dono do evento
         if (event.useruid === useruid) {
-            // Dono do evento pode criar tickets
-            const ticket = new Ticket({
-                description, eventId, price, quantity_available, useruid
-            })
-
-            await this.ticketRepository.create(ticket)
-            return { ticket }
+            // Dono do evento pode deletar tickets
+            await this.ticketRepository.delete(id)
+            return
         }
 
         // Se não for o dono do evento, verificar se é dono do estabelecimento
@@ -51,16 +40,10 @@ export class CreateTicket {
                 throw new UnauthorizedException("Acesso negado!")
             }
 
-            const ticket = new Ticket({
-                description, eventId, price, quantity_available, useruid
-            })
-
-            await this.ticketRepository.create(ticket)
-
-            return { ticket }
+            await this.ticketRepository.delete(id)
         } catch (error) {
             // Se não conseguir verificar o estabelecimento, negar acesso
             throw new UnauthorizedException("Acesso negado!")
         }
     }
-}
+} 

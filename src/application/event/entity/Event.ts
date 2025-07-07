@@ -13,6 +13,7 @@ export interface EventProps {
     coordinates_event?: Coord,
     establishmentId?: string,
     dateTimestamp: string,
+    endTimestamp?: string,
     description: string,
     ticketTakers?: string[],
     listNames?: string[],
@@ -69,6 +70,14 @@ export class Event {
 
     public get dateTimestamp(): string {
         return this.props.dateTimestamp;
+    }
+
+    public set endTimestamp(endTimestamp: string) {
+        this.props.endTimestamp = endTimestamp;
+    }
+
+    public get endTimestamp(): string {
+        return this.props.endTimestamp;
     }
 
     public set description(description: string) {

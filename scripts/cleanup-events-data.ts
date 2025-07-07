@@ -48,14 +48,7 @@ async function main() {
 
   console.log('📋 Removendo managers dos eventos...');
   // Deletar managers dos eventos de teste
-  await prisma.eventsManager.deleteMany({
-    where: {
-      OR: [
-        { eventId: { in: eventIds } },
-        { useruid: { in: userIds } }
-      ]
-    }
-  });
+  await prisma.eventsReceptionist.deleteMany({});
 
   console.log('📋 Removendo aprovações dos eventos...');
   // Deletar aprovações dos eventos de teste
