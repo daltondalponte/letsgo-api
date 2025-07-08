@@ -4,7 +4,6 @@ import { Replace } from "@helpers/Replace";
 export interface CupomProps {
     code: string;
     descont_percent?: number;
-    discont_value?: number;
     discount_value?: number;
     quantity_available: number;
     expiresAt?: Date;
@@ -73,11 +72,11 @@ export class Cupom {
     }
 
     public set discountValue(value: number) {
-        this.props.discont_value = value;
+        this.props.discount_value = value;
     }
 
     public get discountValue(): number {
-        return this.props.discont_value;
+        return this.props.discount_value;
     }
 
     public set expiresAt(expiresAt: Date) {

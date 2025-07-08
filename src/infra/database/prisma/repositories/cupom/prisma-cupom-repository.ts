@@ -109,4 +109,36 @@ export class PrismaCupomRepository implements CupomRepository {
         })
     }
 
+    async delete(id: string): Promise<void> {
+        // Deletar todos os registros relacionados em ordem (do mais dependente para o menos)
+        
+        // 1. CuponsAplicados (relacionados a vendas de tickets)
+        await this.prisma.cuponsAplicados.deleteMany({
+            where: {
+                cupomId: id
+            }
+        });
+
+        // 2. TicketCupons (relacionados a tickets)
+        await this.prisma.ticketCupons.deleteMany({
+            where: {
+                cupomId: id
+            }
+        });
+
+        // 3. CupomAudit (registros de auditoria)
+        await this.prisma.cupomAudit.deleteMany({
+            where: {
+                entityId: id
+            }
+        });
+
+        // 4. Finalmente deletar o cupom
+        await this.prisma.cupom.delete({
+            where: {
+                id
+            }
+        })
+    }
+
 }

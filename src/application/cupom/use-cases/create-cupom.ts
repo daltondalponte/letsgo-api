@@ -16,13 +16,13 @@ export class CreateCupom {
     ) { }
 
     async execute(request: CupomRequest): Promise<CupomResponse> {
-        const { code, descont_percent, quantity_available, expiresAt, eventId, discont_value, useruid, description } = request
+        const { code, descont_percent, quantity_available, expiresAt, eventId, discount_value, useruid, description } = request
 
         const cupom = new Cupom({
             code,
             descont_percent,
             quantity_available,
-            discont_value,
+            discount_value,
             eventId,
             useruid,
             expiresAt,

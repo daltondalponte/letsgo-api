@@ -21,11 +21,11 @@ export class PrismaCupomMapper {
         }
     }
 
-    static toDomain(rawCupom: RawCupom) {
+            static toDomain(rawCupom: RawCupom) {
         return new Cupom({
             code: rawCupom.code,
             descont_percent: rawCupom.descont_percent ? Number(rawCupom.descont_percent) : null,
-            discont_value: rawCupom.discount_value ? Number(rawCupom.discount_value) : null,
+            discount_value: rawCupom.discount_value ? Number(rawCupom.discount_value) : null,
             quantity_available: rawCupom.quantity_available,
             expiresAt: rawCupom.expiresAt,
             createdAt: rawCupom.createdAt,

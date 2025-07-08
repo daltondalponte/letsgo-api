@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, IsNumber } from "class-validator";
+import { IsNotEmpty, IsString, IsNumber, IsOptional } from "class-validator";
 import { ApiProperty } from "@nestjs/swagger"
 
 export class UpdateBody {
@@ -13,15 +13,18 @@ export class UpdateBody {
     quantity_available: number;
 
     @ApiProperty()
+    @IsOptional()
     @IsString()
     eventId?: string;
 
     @ApiProperty()
-    @IsNotEmpty()
+    @IsOptional()
     @IsNumber()
-    descont_percent: number;
+    descont_percent?: number;
 
     @ApiProperty()
+    @IsOptional()
+    @IsNumber()
     discount_value?: number;
 
     @ApiProperty()

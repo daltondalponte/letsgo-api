@@ -26,7 +26,7 @@ export class CupomBody  {
     @ApiProperty()
     @IsOptional()
     @IsNumber()
-    discont_value: number;
+    discount_value: number;
 
     @ApiProperty()
     @IsNotEmpty()

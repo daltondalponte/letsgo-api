@@ -41,6 +41,7 @@ import { SaveUserDeviceToken } from "@application/user/use-cases/upsert-device-t
 import { CupomController } from "./controllers/cupom.controller";
 import { CreateCupom } from "@application/cupom/use-cases/create-cupom";
 import { UpdateCupom } from "@application/cupom/use-cases/update-cupom";
+import { DeleteCupom } from "@application/cupom/use-cases/delete-cupom";
 import { FindCuponsByTicketId } from "@application/cupom/use-cases/find-by-ticket";
 import { FindCuponsByTicketIdAndCode } from "@application/cupom/use-cases/find-by-ticket-and-code";
 import { CreateEventAudit } from "@application/audit-entity/use-cases/event/create-event-audit";
@@ -124,6 +125,7 @@ import { DeleteTicket } from '@application/ticket/use-cases/delete-ticket';
         CreateTicketPurchase,
         CreateCupom,
         UpdateCupom,
+        DeleteCupom,
         FindCuponsByTicketId,
         FindCuponsByTicketIdAndCode,
         CreateEventAudit,

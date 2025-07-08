@@ -1,8 +1,9 @@
-import { Controller, Body, UseGuards, Post, Get, Request, Put, Query, Delete } from '@nestjs/common';
+import { Controller, Body, UseGuards, Post, Get, Request, Put, Query, Delete, Param } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ApiTags } from '@nestjs/swagger';
 import { CreateCupom } from '@application/cupom/use-cases/create-cupom';
 import { UpdateCupom } from '@application/cupom/use-cases/update-cupom';
+import { DeleteCupom } from '@application/cupom/use-cases/delete-cupom';
 import { FindCuponsByTicketId } from '@application/cupom/use-cases/find-by-ticket';
 import { FindCuponsByTicketIdAndCode } from '@application/cupom/use-cases/find-by-ticket-and-code';
 import { CupomBody } from '../dtos/cupom/cupom-body';
@@ -21,6 +22,7 @@ export class CupomController {
     constructor(
         private createCupom: CreateCupom,
         private updateCupom: UpdateCupom,
+        private deleteCupom: DeleteCupom,
         private findByTicket: FindCuponsByTicketId,
         private findByTicketAndCode: FindCuponsByTicketIdAndCode,
         private createCupomAudit: CreateCupomAudit,
@@ -31,14 +33,14 @@ export class CupomController {
     @Post("create")
     async create(@Request() req, @Body() body: CupomBody) {
         const { userId: useruid } = req.user
-        const { code, descont_percent, quantity_available, eventId, expiresAt, discont_value, description } = body
+        const { code, descont_percent, quantity_available, eventId, expiresAt, discount_value, description } = body
         
         const { cupom } = await this.createCupom.execute(
             {
                 code,
                 descont_percent,
                 quantity_available,
-                discont_value,
+                discount_value,
                 eventId,
                 useruid,
                 expiresAt: new Date(expiresAt),
@@ -49,7 +51,7 @@ export class CupomController {
         await this.createCupomAudit.execute({
             useruid,
             modificationType: "CREATECUPOM",
-            details: { code, descont_percent, quantity_available, eventId, discont_value },
+            details: { code, descont_percent, quantity_available, eventId, discount_value },
             entityId: cupom.id
 
         }).catch(console.error)
@@ -59,9 +61,19 @@ export class CupomController {
 
     @UseGuards(JwtAuthGuard, CanUpdateCuponsGuard)
     @Put("update")
-    async update(@Query() id, @Request() req, @Body() body: UpdateBody) {
+    async update(@Query() query, @Request() req, @Body() body: UpdateBody) {
         const { userId: useruid } = req.user
-        const { code, descont_percent, discount_value, quantity_available, description } = body
+        const id = typeof query === 'object' && query.id ? query.id : query;
+        
+        // DEBUG: Log do que está chegando
+        console.log('=== DEBUG UPDATE CUPOM ===');
+        console.log('query original:', query);
+        console.log('id extraído:', id);
+        console.log('body completo:', body);
+        console.log('body.eventId:', body.eventId);
+        console.log('typeof body.eventId:', typeof body.eventId);
+        
+        const { code, descont_percent, discount_value, quantity_available, description, eventId } = body
 
         await this.updateCupom.execute({
             id,
@@ -69,13 +81,33 @@ export class CupomController {
             descont_percent,
             discount_value,
             quantity_available,
-            description
+            description,
+            eventId
         })
 
         await this.createCupomAudit.execute({
             useruid,
             modificationType: "CREATECUPOM",
             details: { code, descont_percent, quantity_available },
+            entityId: id
+        }).catch(console.error)
+
+        return 'sucesso'
+    }
+
+    @UseGuards(JwtAuthGuard, CanUpdateCuponsGuard)
+    @Delete("delete/:id")
+    async delete(@Param('id') id: string, @Request() req) {
+        const { userId: useruid } = req.user
+
+        await this.deleteCupom.execute({
+            id
+        })
+
+        await this.createCupomAudit.execute({
+            useruid,
+            modificationType: "UPDATECUPOM",
+            details: { cupomId: id, action: "DELETE" },
             entityId: id
         }).catch(console.error)
 

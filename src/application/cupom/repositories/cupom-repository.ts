@@ -9,4 +9,5 @@ export abstract class CupomRepository {
     abstract dettachCupomTicket(cupomId: string, ticketId: string): Promise<void>;
     abstract findById(id: string): Promise<Cupom | null>;
     abstract save(cupom: Cupom): Promise<void>;
+    abstract delete(id: string): Promise<void>;
 }
