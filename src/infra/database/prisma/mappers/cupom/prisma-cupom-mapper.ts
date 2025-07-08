@@ -14,6 +14,8 @@ export class PrismaCupomMapper {
             eventId: cupom.eventId,
             descont_percent: cupom.descontPercent ? new Decimal(cupom.descontPercent) : null,
             discount_value: cupom.discountValue ? new Decimal(cupom.discountValue) : null,
+            useruid: cupom.useruid, // Adicionado para persistir o useruid
+            description: cupom.description, // <-- Adicionado
             createdAt: cupom.createdAt,
             updatedAt: cupom.updatedAt,
         }
@@ -28,7 +30,9 @@ export class PrismaCupomMapper {
             expiresAt: rawCupom.expiresAt,
             createdAt: rawCupom.createdAt,
             updatedAt: rawCupom.updatedAt,
-            eventId: rawCupom.eventId
+            eventId: rawCupom.eventId,
+            useruid: rawCupom.useruid, // Adicionado para recuperar o useruid
+            description: rawCupom.description // <-- Adicionado
         }, rawCupom?.id)
     }
 }

@@ -392,10 +392,7 @@ export class PrismaEventRepository implements EventRepository {
         const events = await this.prisma.event.findMany({
             where: {
                 establishmentId,
-                isActive: false, // Eventos inativos (pendentes de aprovação)
-                EventApprovals: {
-                    none: {} // Eventos que não têm aprovação ainda
-                }
+                isActive: false // Eventos inativos (pendentes de aprovação)
             },
             include: {
                 user: true,
@@ -407,7 +404,10 @@ export class PrismaEventRepository implements EventRepository {
             }
         });
 
-        return events.map(event => ({
+        // Filtrar eventos que não têm aprovação ainda
+        const pendingEvents = events.filter(event => !event.EventApprovals);
+
+        return pendingEvents.map(event => ({
             id: event.id,
             name: event.name,
             description: event.description,

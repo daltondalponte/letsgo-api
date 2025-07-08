@@ -57,12 +57,10 @@ export class PrismaCupomRepository implements CupomRepository {
 
     async findByTicketIdAndCode(ticketId: string, code: string, eventId: string): Promise<Cupom> {
 
-        const cupom = await this.prisma.cupom.findUnique({
+        const cupom = await this.prisma.cupom.findFirst({
             where: {
-                eventId_code: {
-                    code,
-                    eventId
-                }
+                code,
+                eventId
             },
             include: {
                 TicketCupons: true
@@ -79,12 +77,12 @@ export class PrismaCupomRepository implements CupomRepository {
 
     }
 
-    async findManyByEventId(eventId: string): Promise<Cupom[]> {
+    async findManyByEventId(eventId?: string): Promise<Cupom[]> {
+
+        const whereClause = eventId ? { eventId } : { eventId: null };
 
         const cupons = await this.prisma.cupom.findMany({
-            where: {
-                eventId
-            }
+            where: whereClause
         })
 
         return cupons.map(PrismaCupomMapper.toDomain)

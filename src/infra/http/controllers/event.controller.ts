@@ -13,6 +13,7 @@ import { ApproveEvent } from '@application/event/use-cases/approve-event';
 import { RejectEvent } from '@application/event/use-cases/reject-event';
 import { UnauthorizedException } from '@nestjs/common';
 import { FindEstablishmentById } from '@application/establishment/use-cases/find-many-by-id';
+import { PrismaService } from '@infra/database/prisma/prisma.service';
 
 @ApiTags("Evento")
 @Controller("event")
@@ -27,7 +28,8 @@ export class EventController {
         private findPendingApprovals: FindPendingApprovals,
         private approveEvent: ApproveEvent,
         private rejectEvent: RejectEvent,
-        private findEstablishmentById: FindEstablishmentById
+        private findEstablishmentById: FindEstablishmentById,
+        private prisma: PrismaService
     ) { }
 
     @UseGuards(JwtAuthGuard, EnsureProfessionalUser)
@@ -38,7 +40,7 @@ export class EventController {
         let { name, description, dateTimestamp, endTimestamp, duration, establishmentId, address, coordinates_event, photos = [], tickets = [] } = body
 
         // Validar se a data não é passada
-        const eventDate = new Date(dateTimestamp.replace(' ', 'T'));
+        const eventDate = new Date(dateTimestamp);
         const now = new Date();
         if (eventDate <= now) {
             throw new BadRequestException('Não é possível criar eventos em datas passadas ou na data atual. A data do evento deve ser futura.');
@@ -51,23 +53,17 @@ export class EventController {
                 throw new BadRequestException('A duração do evento deve ser de pelo menos 1 hora.');
             }
             const endDate = new Date(eventDate.getTime() + dur * 60 * 60 * 1000);
-            endTimestamp = endDate.toISOString().replace('Z', '');
+            endTimestamp = endDate.toISOString();
         }
 
-        // Garantir formato ISO-8601 válido para o Prisma, mantendo o horário local, mas adicionando 'Z'
+        // Garantir formato ISO-8601 válido para o Prisma
         let formattedDateTimestamp = dateTimestamp;
-        if (!dateTimestamp.includes('.')) {
-            formattedDateTimestamp = dateTimestamp + '.000';
-        }
         if (!formattedDateTimestamp.endsWith('Z')) {
             formattedDateTimestamp += 'Z';
         }
 
         let formattedEndTimestamp = endTimestamp;
-        if (endTimestamp && !endTimestamp.includes('.')) {
-            formattedEndTimestamp = endTimestamp + '.000';
-        }
-        if (formattedEndTimestamp && !formattedEndTimestamp.endsWith('Z')) {
+        if (endTimestamp && !formattedEndTimestamp.endsWith('Z')) {
             formattedEndTimestamp += 'Z';
         }
 
@@ -173,7 +169,7 @@ export class EventController {
     async findManyByEstablishmentApproved(@Param("id") establishmentId: string, @Request() req) {
         const { events } = await this.findEventsByUserUidOrEstablishmentId.execute({ establishmentId, approvedOnly: true })
 
-        return { events };
+        return { events: events.map(EventViewModel.toHTTP) };
     }
 
     @UseGuards(JwtAuthGuard)
@@ -281,5 +277,132 @@ export class EventController {
         await this.rejectEvent.execute({ eventId, useruid });
 
         return { message: "Evento rejeitado com sucesso" };
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Get('reports/stats')
+    async getEventStats(@Request() req) {
+      const user = req.user;
+      let events = [];
+
+      if (user.type === 'PROFESSIONAL_PROMOTER') {
+        console.log('Relatório PROMOTER - userId:', user.userId);
+        events = await this.prisma.event.findMany({
+          where: { useruid: user.userId },
+          include: {
+            Ticket: {
+              include: { TicketSale: true }
+            }
+          }
+        });
+        console.log('Eventos encontrados:', events.map(e => ({ id: e.id, useruid: e.useruid, name: e.name })));
+      } else if (user.type === 'PROFESSIONAL_OWNER') {
+        const establishments = await this.prisma.establishment.findMany({
+          where: { userOwnerUid: user.userId },
+          select: { id: true }
+        });
+        const establishmentIds = establishments.map(e => e.id);
+        console.log('Relatório OWNER - userId:', user.userId, 'Establishments:', establishmentIds);
+        events = await this.prisma.event.findMany({
+          where: { establishmentId: { in: establishmentIds } },
+          include: {
+            Ticket: {
+              include: { TicketSale: true }
+            }
+          }
+        });
+        console.log('Eventos encontrados:', events.map(e => ({ id: e.id, establishmentId: e.establishmentId, name: e.name })));
+      }
+
+      // Montar resposta no formato esperado
+      const result = events.map(event => {
+        const tickets = event.Ticket || [];
+        const ticketsSold = tickets.reduce((sum, t) => sum + (t.TicketSale?.length || 0), 0);
+        const ticketsAvailable = tickets.reduce((sum, t) => sum + (t.quantity_available || 0), 0);
+        const totalRevenue = tickets.reduce((sum, t) => sum + (t.TicketSale?.reduce((s, sale) => s + (sale.price || 0), 0) || 0), 0);
+        return {
+          id: event.id,
+          name: event.name,
+          totalSales: ticketsSold,
+          totalRevenue,
+          ticketsSold,
+          ticketsAvailable,
+          date: event.dateTimestamp
+        };
+      });
+
+      return { events: result };
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Get('reports/sales')
+    async getEventSales(@Request() req) {
+      const user = req.user;
+      // Buscar dados reais do banco conforme perfil
+      return {
+        sales: [] // TODO: implementar busca real
+      };
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Get('reports/summary')
+    async getEventSummary(@Request() req) {
+      const user = req.user;
+      let events = [];
+
+      if (user.type === 'PROFESSIONAL_PROMOTER') {
+        console.log('Resumo PROMOTER - userId:', user.userId);
+        events = await this.prisma.event.findMany({
+          where: { useruid: user.userId },
+          include: {
+            Ticket: {
+              include: { TicketSale: true }
+            }
+          }
+        });
+        console.log('Eventos encontrados:', events.map(e => ({ id: e.id, useruid: e.useruid, name: e.name })));
+      } else if (user.type === 'PROFESSIONAL_OWNER') {
+        const establishments = await this.prisma.establishment.findMany({
+          where: { userOwnerUid: user.userId },
+          select: { id: true }
+        });
+        const establishmentIds = establishments.map(e => e.id);
+        console.log('Resumo OWNER - userId:', user.userId, 'Establishments:', establishmentIds);
+        events = await this.prisma.event.findMany({
+          where: { establishmentId: { in: establishmentIds } },
+          include: {
+            Ticket: {
+              include: { TicketSale: true }
+            }
+          }
+        });
+        console.log('Eventos encontrados:', events.map(e => ({ id: e.id, establishmentId: e.establishmentId, name: e.name })));
+      }
+
+      let totalRevenue = 0;
+      let totalSales = 0;
+      let totalEvents = events.length;
+      let ticketCount = 0;
+      let ticketSum = 0;
+
+      events.forEach(event => {
+        const tickets = event.Ticket || [];
+        tickets.forEach(t => {
+          const sales = t.TicketSale || [];
+          totalSales += sales.length;
+          totalRevenue += sales.reduce((sum, sale) => sum + (sale.price || 0), 0);
+          ticketCount += sales.length;
+          ticketSum += sales.reduce((sum, sale) => sum + (sale.price || 0), 0);
+        });
+      });
+
+      const avgTicketPrice = ticketCount > 0 ? ticketSum / ticketCount : 0;
+
+      return {
+        totalRevenue,
+        totalSales,
+        totalEvents,
+        avgTicketPrice
+      };
     }
 }

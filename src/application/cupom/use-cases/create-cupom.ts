@@ -16,7 +16,7 @@ export class CreateCupom {
     ) { }
 
     async execute(request: CupomRequest): Promise<CupomResponse> {
-        const { code, descont_percent, quantity_available, expiresAt, eventId, discont_value } = request
+        const { code, descont_percent, quantity_available, expiresAt, eventId, discont_value, useruid, description } = request
 
         const cupom = new Cupom({
             code,
@@ -24,7 +24,9 @@ export class CreateCupom {
             quantity_available,
             discont_value,
             eventId,
-            expiresAt
+            useruid,
+            expiresAt,
+            description
         })
 
         await this.cupomRepository.create(cupom)

@@ -14,9 +14,9 @@ export class CupomBody  {
     quantity_available: number;
 
     @ApiProperty()
-    @IsNotEmpty()
+    @IsOptional()
     @IsString()
-    eventId: string;
+    eventId?: string;
 
     @ApiProperty()
     @IsOptional()
@@ -32,5 +32,8 @@ export class CupomBody  {
     @IsNotEmpty()
     @IsString()
     expiresAt: string;
+
+    @ApiProperty()
+    description?: string;
 
 }

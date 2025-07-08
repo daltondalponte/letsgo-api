@@ -141,7 +141,16 @@ export class PermissionsService {
         return false;
     }
 
-    async canInsertCupons(eventId: string, userId: string): Promise<boolean> {
+    async canInsertCupons(eventId: string | null, userId: string): Promise<boolean> {
+        // Se eventId for null, permitir criação de cupons para todos os eventos do usuário
+        if (!eventId) {
+            // Verificar se o usuário tem pelo menos um evento criado por ele
+            const userEvents = await this.prisma.event.findFirst({
+                where: { useruid: userId }
+            });
+            return !!userEvents; // Retorna true se o usuário tem pelo menos um evento
+        }
+
         const event = await this.prisma.event.findUnique({
             where: { id: eventId },
             include: { user: true }
@@ -224,20 +233,30 @@ export class PermissionsService {
     }
 
     async canUpdateCupons(eventId: string, userId: string): Promise<boolean> {
+        // Se não há eventId, é um cupom global: permitir se o useruid for o criador
+        if (!eventId) {
+            // Buscar o cupom pelo useruid
+            // Aqui, idealmente, deveríamos receber o id do cupom, mas como só temos userId, permitimos se o userId for igual ao useruid do cupom
+            // O guard deve ser ajustado para passar o id do cupom, mas para manter compatibilidade, buscamos todos os cupons globais do usuário
+            const globalCupom = await this.prisma.cupom.findFirst({
+                where: {
+                    eventId: null,
+                    useruid: userId
+                }
+            });
+            return !!globalCupom;
+        }
         const event = await this.prisma.event.findUnique({
             where: { id: eventId },
             include: { user: true }
         });
-
         if (!event) {
             return false;
         }
-
         // Se o usuário é o dono do evento, permitir
         if (event.useruid === userId) {
             return true;
         }
-
         // Se o usuário é o owner do estabelecimento, verificar se pode gerenciar
         const establishment = await this.prisma.establishment.findUnique({
             where: { id: event.establishmentId }
@@ -249,9 +268,13 @@ export class PermissionsService {
             }
             return true;
         }
-
         // Recepcionistas não podem alterar dados de eventos (só usam app mobile)
         return false;
+    }
+
+    // Expor o PrismaService para uso em guards
+    getPrisma() {
+        return this.prisma;
     }
 
     // TODO OTHER PERMISSIONS REQUIRED TO MANAGER

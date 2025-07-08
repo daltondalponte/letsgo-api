@@ -13,13 +13,18 @@ export class UpdateBody {
     quantity_available: number;
 
     @ApiProperty()
-    @IsNotEmpty()
-    @IsNumber()
-    eventId: string;
+    @IsString()
+    eventId?: string;
 
     @ApiProperty()
     @IsNotEmpty()
     @IsNumber()
     descont_percent: number;
+
+    @ApiProperty()
+    discount_value?: number;
+
+    @ApiProperty()
+    description?: string;
 
 } 

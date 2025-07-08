@@ -12,6 +12,7 @@ import { CanUpdateCuponsGuard } from '../auth/guards/cupom/can-update-cupons.gua
 import { EnsureManagerEvent } from '../auth/guards/ensure-manage-event.guard';
 import { UpdateBody } from '../dtos/cupom/update-body';
 import { CreateCupomAudit } from '@application/audit-entity/use-cases/cupom/create-cupom-audit';
+import { PrismaService } from '@infra/database/prisma/prisma.service';
 
 @ApiTags("Cupom")
 @Controller("cupom")
@@ -22,14 +23,15 @@ export class CupomController {
         private updateCupom: UpdateCupom,
         private findByTicket: FindCuponsByTicketId,
         private findByTicketAndCode: FindCuponsByTicketIdAndCode,
-        private createCupomAudit: CreateCupomAudit
+        private createCupomAudit: CreateCupomAudit,
+        private prisma: PrismaService
     ) { }
 
     @UseGuards(JwtAuthGuard, CanInsertCuponsGuard)
     @Post("create")
     async create(@Request() req, @Body() body: CupomBody) {
         const { userId: useruid } = req.user
-        const { code, descont_percent, quantity_available, eventId, expiresAt, discont_value } = body
+        const { code, descont_percent, quantity_available, eventId, expiresAt, discont_value, description } = body
         
         const { cupom } = await this.createCupom.execute(
             {
@@ -38,7 +40,9 @@ export class CupomController {
                 quantity_available,
                 discont_value,
                 eventId,
-                expiresAt: new Date(expiresAt)
+                useruid,
+                expiresAt: new Date(expiresAt),
+                description
             }
         )
 
@@ -57,13 +61,15 @@ export class CupomController {
     @Put("update")
     async update(@Query() id, @Request() req, @Body() body: UpdateBody) {
         const { userId: useruid } = req.user
-        const { code, descont_percent, quantity_available } = body
+        const { code, descont_percent, discount_value, quantity_available, description } = body
 
         await this.updateCupom.execute({
             id,
             code,
             descont_percent,
-            quantity_available
+            discount_value,
+            quantity_available,
+            description
         })
 
         await this.createCupomAudit.execute({
@@ -136,6 +142,85 @@ export class CupomController {
         })
 
         return { cupons: cupons.map(CupomViewModel.toHTTP) }
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Get('findAllByUser')
+    async findAllByUser(@Request() req) {
+      const { userId, type } = req.user;
+      console.log('=== DEBUG findAllByUser ===');
+      console.log('userId:', userId);
+      console.log('type:', type);
+      
+      // TEMPORÁRIO: buscar todos os cupons para debug
+      const allCupons = await this.prisma.cupom.findMany({
+        include: { event: true }
+      });
+      console.log('Todos os cupons no banco:', allCupons);
+      
+      let cupons = [];
+
+      if (type === 'PROFESSIONAL_PROMOTER' || type === 'PROFESSIONAL_OWNER') {
+        let eventIds = [];
+        
+        if (type === 'PROFESSIONAL_PROMOTER') {
+          // Promoters: buscar eventos criados por eles
+          const events = await this.prisma.event.findMany({
+            where: { useruid: userId },
+            select: { id: true, name: true }
+          });
+          eventIds = events.map(e => e.id);
+          console.log('Promoter events:', events);
+        } else if (type === 'PROFESSIONAL_OWNER') {
+          // Owners: buscar eventos do seu estabelecimento
+          const establishments = await this.prisma.establishment.findMany({
+            where: { userOwnerUid: userId },
+            select: { id: true }
+          });
+          const establishmentIds = establishments.map(e => e.id);
+          console.log('Owner establishments:', establishments);
+          
+          const events = await this.prisma.event.findMany({
+            where: { establishmentId: { in: establishmentIds } },
+            select: { id: true, name: true }
+          });
+          eventIds = events.map(e => e.id);
+          console.log('Owner events:', events);
+        }
+        
+        console.log('eventIds:', eventIds);
+        
+        // Buscar cupons de eventos específicos
+        const eventSpecificCupons = await this.prisma.cupom.findMany({
+          where: {
+            eventId: { in: eventIds }
+          },
+          include: { event: true }
+        });
+        console.log('eventSpecificCupons:', eventSpecificCupons);
+        
+        // Buscar cupons globais criados pelo usuário logado
+        const globalCupons = await this.prisma.cupom.findMany({
+          where: {
+            eventId: null,
+            useruid: userId
+          },
+          include: { event: true }
+        });
+        console.log('globalCupons:', globalCupons);
+        
+        // Combinar os cupons
+        cupons = [...eventSpecificCupons, ...globalCupons];
+        console.log('Total cupons:', cupons.length);
+        
+        // Adicionar nome do evento ao cupom
+        cupons = cupons.map(c => ({
+          ...c,
+          eventName: c.event?.name || "Todos os eventos"
+        }));
+      }
+
+      return { cupons };
     }
 
 }

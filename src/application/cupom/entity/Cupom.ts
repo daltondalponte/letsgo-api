@@ -3,13 +3,16 @@ import { Replace } from "@helpers/Replace";
 
 export interface CupomProps {
     code: string;
-    quantity_available: number;
     descont_percent?: number;
     discont_value?: number;
-    eventId: string;
-    expiresAt: Date;
-    createdAt: Date;
-    updatedAt: Date;
+    discount_value?: number;
+    quantity_available: number;
+    expiresAt?: Date;
+    createdAt?: Date;
+    updatedAt?: Date;
+    eventId?: string;
+    useruid?: string;
+    description?: string;
 }
 
 export class Cupom {
@@ -45,12 +48,20 @@ export class Cupom {
         return this.props.quantity_available;
     }
 
-    public set eventId(eventId: string) {
+    public set eventId(eventId: string | undefined) {
         this.props.eventId = eventId;
     }
 
-    public get eventId(): string {
+    public get eventId(): string | undefined {
         return this.props.eventId;
+    }
+
+    public set useruid(useruid: string | undefined) {
+        this.props.useruid = useruid;
+    }
+
+    public get useruid(): string | undefined {
+        return this.props.useruid;
     }
 
     public set descontPercent(percent: number) {
@@ -75,6 +86,13 @@ export class Cupom {
 
     public get expiresAt(): Date {
         return this.props.expiresAt;
+    }
+
+    public set description(description: string | undefined) {
+        this.props.description = description;
+    }
+    public get description(): string | undefined {
+        return this.props.description;
     }
 
     public get createdAt(): Date {

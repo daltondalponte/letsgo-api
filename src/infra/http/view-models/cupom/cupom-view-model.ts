@@ -13,7 +13,9 @@ export class CupomViewModel {
             descontPercent: Number(cupom.descontPercent),
             discontValue: Number(cupom.discountValue),
             createdAt: cupom?.createdAt,
-            updatedAt: cupom?.updatedAt
+            updatedAt: cupom?.updatedAt,
+            useruid: cupom.useruid,
+            description: cupom.description
         }
     }
 }

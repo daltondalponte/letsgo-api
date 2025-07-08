@@ -106,7 +106,12 @@ export class PermissionsService {
         return false;
     }
 
-    async canInsertCupons(eventId: string, userId: string): Promise<boolean> {
+    async canInsertCupons(eventId: string | null, userId: string): Promise<boolean> {
+        // Se não há eventId, é um cupom global - não permitir (deve ser tratado no guard)
+        if (!eventId) {
+            return false;
+        }
+
         const event = await this.prisma.event.findUnique({
             where: { id: eventId }
         });
@@ -179,6 +184,14 @@ export class PermissionsService {
     }
 
     async canUpdateCupons(eventId: string, userId: string): Promise<boolean> {
+        if (!eventId || eventId === "" || eventId === "null") {
+            // Cupom global: permitir se o usuário for o criador do cupom global
+            const cupom = await this.prisma.cupom.findFirst({
+                where: { eventId: null, useruid: userId }
+            });
+            return !!cupom;
+        }
+
         const event = await this.prisma.event.findUnique({
             where: { id: eventId }
         });
