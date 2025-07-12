@@ -153,6 +153,13 @@ export class EventController {
             tickets // Passar os tickets para o use case
         })
 
+        console.log('Evento criado com fotos:', { 
+            eventId: event.id, 
+            eventName: event.name, 
+            photos: event.photos,
+            photosLength: event.photos?.length 
+        });
+
         return { event: EventViewModel.toHTTP(event) }
     }
 
@@ -167,6 +174,13 @@ export class EventController {
     @UseGuards(JwtAuthGuard)
     @Get("find-many-by-establishment-approved/:id")
     async findManyByEstablishmentApproved(@Param("id") establishmentId: string, @Request() req) {
+        const { events } = await this.findEventsByUserUidOrEstablishmentId.execute({ establishmentId, approvedOnly: true })
+
+        return { events: events.map(EventViewModel.toHTTP) };
+    }
+
+    @Get("find-many-by-establishment-public/:id")
+    async findManyByEstablishmentPublic(@Param("id") establishmentId: string) {
         const { events } = await this.findEventsByUserUidOrEstablishmentId.execute({ establishmentId, approvedOnly: true })
 
         return { events: events.map(EventViewModel.toHTTP) };
@@ -286,7 +300,6 @@ export class EventController {
       let events = [];
 
       if (user.type === 'PROFESSIONAL_PROMOTER') {
-        console.log('Relatório PROMOTER - userId:', user.userId);
         events = await this.prisma.event.findMany({
           where: { useruid: user.userId },
           include: {
@@ -295,14 +308,12 @@ export class EventController {
             }
           }
         });
-        console.log('Eventos encontrados:', events.map(e => ({ id: e.id, useruid: e.useruid, name: e.name })));
       } else if (user.type === 'PROFESSIONAL_OWNER') {
         const establishments = await this.prisma.establishment.findMany({
           where: { userOwnerUid: user.userId },
           select: { id: true }
         });
         const establishmentIds = establishments.map(e => e.id);
-        console.log('Relatório OWNER - userId:', user.userId, 'Establishments:', establishmentIds);
         events = await this.prisma.event.findMany({
           where: { establishmentId: { in: establishmentIds } },
           include: {
@@ -311,7 +322,6 @@ export class EventController {
             }
           }
         });
-        console.log('Eventos encontrados:', events.map(e => ({ id: e.id, establishmentId: e.establishmentId, name: e.name })));
       }
 
       // Montar resposta no formato esperado
@@ -351,7 +361,6 @@ export class EventController {
       let events = [];
 
       if (user.type === 'PROFESSIONAL_PROMOTER') {
-        console.log('Resumo PROMOTER - userId:', user.userId);
         events = await this.prisma.event.findMany({
           where: { useruid: user.userId },
           include: {
@@ -360,14 +369,12 @@ export class EventController {
             }
           }
         });
-        console.log('Eventos encontrados:', events.map(e => ({ id: e.id, useruid: e.useruid, name: e.name })));
       } else if (user.type === 'PROFESSIONAL_OWNER') {
         const establishments = await this.prisma.establishment.findMany({
           where: { userOwnerUid: user.userId },
           select: { id: true }
         });
         const establishmentIds = establishments.map(e => e.id);
-        console.log('Resumo OWNER - userId:', user.userId, 'Establishments:', establishmentIds);
         events = await this.prisma.event.findMany({
           where: { establishmentId: { in: establishmentIds } },
           include: {
@@ -376,7 +383,6 @@ export class EventController {
             }
           }
         });
-        console.log('Eventos encontrados:', events.map(e => ({ id: e.id, establishmentId: e.establishmentId, name: e.name })));
       }
 
       let totalRevenue = 0;

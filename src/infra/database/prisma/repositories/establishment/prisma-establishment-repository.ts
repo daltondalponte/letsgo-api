@@ -51,14 +51,24 @@ export class PrismaEstablishmentRepository implements EstablishmentRepository {
     }
 
     async save(establishment: Establishment): Promise<void> {
+        console.log('💾 PrismaEstablishmentRepository.save - Salvando estabelecimento:');
+        console.log('ID:', establishment.id);
+        console.log('Coordenadas da entidade:', establishment.coord);
+        
         const rawEstablishment = PrismaEstablishmentMapper.toPrisma(establishment)
+        console.log('📊 Dados convertidos para Prisma:', rawEstablishment);
+        
         delete rawEstablishment.id
+        console.log('📤 Dados finais para update:', rawEstablishment);
+        
         await this.prisma.establishment.update({
             where: {
                 id: establishment.id
             },
             data: rawEstablishment
         })
+        
+        console.log('✅ Estabelecimento atualizado no banco de dados');
     }
 
 

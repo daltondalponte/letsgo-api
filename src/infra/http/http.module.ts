@@ -73,6 +73,7 @@ import { RejectEvent } from '@application/event/use-cases/reject-event';
 import { TicketController } from './controllers/ticket.controller';
 import { CreateTicket } from '@application/ticket/use-cases/create-ticket';
 import { DeleteTicket } from '@application/ticket/use-cases/delete-ticket';
+import { ImageController } from './controllers/image.controller';
 
 @Module({
     imports: [DataBaseModule, AuthModule, MailModule],
@@ -85,7 +86,8 @@ import { DeleteTicket } from '@application/ticket/use-cases/delete-ticket';
         AdminController, // Adicione AdminController aqui
         EventController,
         EventManagerController,
-        TicketController
+        TicketController,
+        ImageController // Adicionado aqui
     ],
     providers: [
         CreateUser,

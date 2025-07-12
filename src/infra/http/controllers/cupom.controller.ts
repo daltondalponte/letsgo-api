@@ -180,15 +180,6 @@ export class CupomController {
     @Get('findAllByUser')
     async findAllByUser(@Request() req) {
       const { userId, type } = req.user;
-      console.log('=== DEBUG findAllByUser ===');
-      console.log('userId:', userId);
-      console.log('type:', type);
-      
-      // TEMPORÁRIO: buscar todos os cupons para debug
-      const allCupons = await this.prisma.cupom.findMany({
-        include: { event: true }
-      });
-      console.log('Todos os cupons no banco:', allCupons);
       
       let cupons = [];
 
@@ -202,7 +193,6 @@ export class CupomController {
             select: { id: true, name: true }
           });
           eventIds = events.map(e => e.id);
-          console.log('Promoter events:', events);
         } else if (type === 'PROFESSIONAL_OWNER') {
           // Owners: buscar eventos do seu estabelecimento
           const establishments = await this.prisma.establishment.findMany({
@@ -210,17 +200,13 @@ export class CupomController {
             select: { id: true }
           });
           const establishmentIds = establishments.map(e => e.id);
-          console.log('Owner establishments:', establishments);
           
           const events = await this.prisma.event.findMany({
             where: { establishmentId: { in: establishmentIds } },
             select: { id: true, name: true }
           });
           eventIds = events.map(e => e.id);
-          console.log('Owner events:', events);
         }
-        
-        console.log('eventIds:', eventIds);
         
         // Buscar cupons de eventos específicos
         const eventSpecificCupons = await this.prisma.cupom.findMany({
@@ -229,7 +215,6 @@ export class CupomController {
           },
           include: { event: true }
         });
-        console.log('eventSpecificCupons:', eventSpecificCupons);
         
         // Buscar cupons globais criados pelo usuário logado
         const globalCupons = await this.prisma.cupom.findMany({
@@ -239,11 +224,9 @@ export class CupomController {
           },
           include: { event: true }
         });
-        console.log('globalCupons:', globalCupons);
         
         // Combinar os cupons
         cupons = [...eventSpecificCupons, ...globalCupons];
-        console.log('Total cupons:', cupons.length);
         
         // Adicionar nome do evento ao cupom
         cupons = cupons.map(c => ({

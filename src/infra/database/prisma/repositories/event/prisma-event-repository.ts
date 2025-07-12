@@ -216,6 +216,7 @@ export class PrismaEventRepository implements EventRepository {
                     dateTimestamp: e.dateTimestamp.toISOString(),
                     endTimestamp: e.endTimestamp ? e.endTimestamp.toISOString() : null,
                     address: e.address,
+                    photos: e.photos,
                     isActive: e.isActive,
                     useruid: e.useruid,
                     establishmentId: e.establishmentId,
@@ -341,6 +342,7 @@ export class PrismaEventRepository implements EventRepository {
             dateTimestamp: rawEvent.dateTimestamp.toISOString(),
             endTimestamp: rawEvent.endTimestamp ? rawEvent.endTimestamp.toISOString() : null,
             address: rawEvent.address,
+            photos: rawEvent.photos,
             isActive: rawEvent.isActive,
             useruid: rawEvent.useruid,
             establishmentId: rawEvent.establishmentId,
@@ -413,6 +415,7 @@ export class PrismaEventRepository implements EventRepository {
             description: event.description,
             dateTimestamp: event.dateTimestamp.toISOString(),
             address: event.address,
+            photos: event.photos,
             promoter: event.user ? {
                 id: event.user.uid,
                 name: event.user.name,

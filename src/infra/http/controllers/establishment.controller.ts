@@ -28,6 +28,16 @@ export class EstablishmentController {
     async create(@Request() req, @Body() body: EstablishmentBody) {
         const { userId: useruid } = req.user
 
+        // Conversão defensiva das coordenadas
+        if (body.coordinates) {
+          if ('lat' in body.coordinates && 'lng' in body.coordinates) {
+            body.coordinates = {
+              latitude: Number(body.coordinates.lat),
+              longitude: Number(body.coordinates.lng)
+            };
+          }
+        }
+
         const { address, photos, coordinates, name, description, contactPhone, website, socialMedia } = body
 
         const { establishment } = await this.createEstablishment.execute(
@@ -68,9 +78,44 @@ export class EstablishmentController {
     async updateByAdmin(@Param("id") id: string, @Request() req, @Body() body: { name?: string; address?: string; coordinates?: any; description?: string; contactPhone?: string; website?: string; socialMedia?: any }) {
         const { userId: useruid, type } = req.user;
         
+        console.log('🔍 DEBUG - Dados recebidos para atualização:');
+        console.log('ID:', id);
+        console.log('Body completo:', JSON.stringify(body, null, 2));
+        console.log('Coordenadas recebidas:', body.coordinates);
+        
+        // Conversão defensiva das coordenadas
+        if (body.coordinates) {
+          console.log('📍 Coordenadas antes da conversão:', body.coordinates);
+          if ('lat' in body.coordinates && 'lng' in body.coordinates) {
+            body.coordinates = {
+              latitude: Number(body.coordinates.lat),
+              longitude: Number(body.coordinates.lng)
+            };
+            console.log('🔄 Coordenadas convertidas de {lat,lng} para {latitude,longitude}:', body.coordinates);
+          } else if ('latitude' in body.coordinates && 'longitude' in body.coordinates) {
+            console.log('✅ Coordenadas já estão no formato correto:', body.coordinates);
+          } else {
+            console.log('⚠️ Formato de coordenadas desconhecido:', body.coordinates);
+          }
+        } else {
+          console.log('❌ Nenhuma coordenada recebida');
+        }
+        
         // Se for MASTER, permitir editar qualquer estabelecimento
         // Se não for MASTER, usar o userOwnerUid normal
         const userOwnerUid = type === "MASTER" ? null : useruid;
+        
+        console.log('📤 Enviando para updateEstablishment.execute:', {
+            id,
+            userOwnerUid,
+            name: body.name,
+            address: body.address,
+            coordinates: body.coordinates,
+            description: body.description,
+            contactPhone: body.contactPhone,
+            website: body.website,
+            socialMedia: body.socialMedia
+        });
         
         await this.updateEstablishment.execute({
             id,
@@ -84,6 +129,7 @@ export class EstablishmentController {
             socialMedia: body.socialMedia
         });
 
+        console.log('✅ Estabelecimento atualizado com sucesso');
         return { message: 'Estabelecimento atualizado com sucesso' };
     }
 
@@ -104,6 +150,41 @@ export class EstablishmentController {
         const { establishments } = await this.findAllEstablishments.execute()
 
         return { establishments: establishments.map(EstablishmentViewModel.toHTTP) }
+    }
+
+    @Get("map")
+    async findForMap() {
+        console.log('🔍 Buscando estabelecimentos para o mapa...');
+        
+        const { establishments } = await this.findAllEstablishments.execute()
+        console.log('📊 Total de estabelecimentos encontrados:', establishments.length);
+
+        // Log dos primeiros estabelecimentos para debug
+        establishments.slice(0, 3).forEach((est, index) => {
+            console.log(`📍 Estabelecimento ${index + 1}:`, {
+                name: est.name,
+                coord: est.coord,
+                coordType: typeof est.coord,
+                hasCoord: !!est.coord
+            });
+        });
+
+        // Filtrar apenas estabelecimentos que têm coordenadas válidas
+        const validEstablishments = establishments.filter(est => {
+            const isValid = est.coord && 
+                   typeof est.coord.latitude === 'number' && 
+                   typeof est.coord.longitude === 'number';
+            
+            if (!isValid) {
+                console.log(`❌ Estabelecimento ${est.name} não tem coordenadas válidas:`, est.coord);
+            }
+            
+            return isValid;
+        });
+
+        console.log('✅ Estabelecimentos com coordenadas válidas:', validEstablishments.length);
+
+        return { establishments: validEstablishments.map(EstablishmentViewModel.toHTTP) }
     }
 
     @UseGuards(JwtAuthGuard)

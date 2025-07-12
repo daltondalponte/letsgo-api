@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Put, Delete, UseGuards, Request, Param } from '@nestjs/common';
+import { Body, Controller, Post, Put, Delete, UseGuards, Request, Param, Get } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CanInsertTicketsGuard } from '../auth/guards/ticket/can-insert-tickets.guard';
@@ -9,6 +9,7 @@ import { UpdateTicketBody } from '../dtos/ticket/update-ticket-body';
 import { CreateTicket } from '@application/ticket/use-cases/create-ticket';
 import { UpdateTicket } from '@application/ticket/use-cases/update-ticket';
 import { DeleteTicket } from '@application/ticket/use-cases/delete-ticket';
+import { FindTicketPurchase } from '@application/ticket/use-cases/find-ticket-purchase';
 import { TicketViewModel } from '../view-models/ticket/ticket-view-model';
 
 @ApiTags('Ticket')
@@ -18,6 +19,7 @@ export class TicketController {
     private createTicket: CreateTicket,
     private updateTicket: UpdateTicket,
     private deleteTicket: DeleteTicket,
+    private findTicketPurchase: FindTicketPurchase,
   ) {}
 
   @UseGuards(JwtAuthGuard, CanInsertTicketsGuard)
@@ -63,5 +65,13 @@ export class TicketController {
       useruid,
     });
     return { message: 'Ticket deletado com sucesso' };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('user')
+  async getUserTickets(@Request() req) {
+    const { userId } = req.user;
+    const { tickets } = await this.findTicketPurchase.execute({ userId });
+    return { tickets };
   }
 } 

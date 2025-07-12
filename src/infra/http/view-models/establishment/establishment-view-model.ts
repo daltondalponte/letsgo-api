@@ -13,7 +13,7 @@ export class EstablishmentViewModel {
             contactPhone: establishment?.contactPhone,
             website: establishment?.website,
             socialMedia: establishment?.socialMedia,
-            coordinates: typeof establishment.coord === "string" ? JSON.parse(JSON.stringify(establishment?.coord)) : establishment.coord,
+            coordinates: establishment?.coord,
             userOwnerUid: establishment?.userOwnerUid,
             createdAt: establishment?.createdAt,
             updatedAt: establishment?.updatedAt
