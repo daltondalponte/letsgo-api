@@ -1,5 +1,5 @@
 import { Controller, Get, Put, Param, Body, UseGuards, Req, UnauthorizedException, Query, Post, Delete, Request, BadRequestException, InternalServerErrorException } from "@nestjs/common";
-import { ApiTags } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { FindAllUsers } from "@application/user/use-cases/find-all-users";
 import { FindAllEvents } from "@application/event/use-cases/find-all-events";
@@ -17,8 +17,7 @@ import { DeleteTicketTaker } from "@application/ticketTaker/use-cases/delete-tic
 import { PrismaService } from "@infra/database/prisma/prisma.service";
 import { TicketTaker } from "@application/ticketTaker/entity/TicketTaker";
 
-
-@ApiTags("Admin Master")
+@ApiTags("Admin")
 @Controller('admin')
 export class AdminController {
     constructor(
@@ -32,17 +31,21 @@ export class AdminController {
         private deleteUserById: DeleteUserById,
         private findTicketsTakerByOwner: FindTicketsTakerByOwner,
         private createTicketTakerUseCase: CreateTicketTaker,
-        private deleteTicketTaker: DeleteTicketTaker,
+        private deleteTicketTakerUseCase: DeleteTicketTaker,
         private prisma: PrismaService,
     ) { }
 
     @UseGuards(JwtAuthGuard)
-    @Put('users/professionals/:id/status')
+    @Put('users/:id/status')
+    @ApiOperation({ summary: 'Update professional user status' })
+    @ApiResponse({ status: 200, description: 'Professional status updated successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 403, description: 'Access denied' })
     async updateProfessionalStatus(@Param("id") id: string, @Body() body: { state: boolean }, @Req() req) {
         const { type } = req.user;
 
         if (type !== "MASTER") {
-            throw new UnauthorizedException("Acesso negado. Apenas usuários Master podem acessar estas informações.");
+            throw new UnauthorizedException("Access denied. Only Master users can access this information.");
         }
 
         try {
@@ -53,20 +56,24 @@ export class AdminController {
                 uid: id
             });
 
-            return { message: 'Status atualizado com sucesso' };
+            return { message: 'Professional status updated successfully' };
         } catch (error) {
-            console.error('Erro ao atualizar status do profissional:', error);
-            throw new Error('Erro interno do servidor');
+            console.error('Error updating professional status:', error);
+            throw new Error('Internal server error');
         }
     }
 
     @UseGuards(JwtAuthGuard)
     @Get('stats/overview')
+    @ApiOperation({ summary: 'Get system overview statistics' })
+    @ApiResponse({ status: 200, description: 'Overview statistics retrieved successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 403, description: 'Access denied' })
     async getOverviewStats(@Req() req) {
         const { type } = req.user;
 
         if (type !== "MASTER") {
-            throw new UnauthorizedException("Acesso negado. Apenas usuários Master podem acessar estas informações.");
+            throw new UnauthorizedException("Access denied. Only Master users can access this information.");
         }
 
         try {
@@ -103,27 +110,31 @@ export class AdminController {
 
             return {
                 totalUsers: users.length,
-                usersByType,
                 totalEvents: events.length,
-                totalTicketsSold: tickets.length,
+                totalTickets: tickets.length,
+                usersByType,
                 ticketsByProfessional,
-                activeUsers: users.filter(user => user.isActive).length,
-                inactiveUsers: users.filter(user => !user.isActive).length,
+                activeEvents: events.filter(event => new Date(event.endDate) > new Date()).length,
+                completedEvents: events.filter(event => new Date(event.endDate) <= new Date()).length,
             };
 
         } catch (error) {
-            console.error('Erro ao buscar estatísticas:', error);
-            throw new Error('Erro interno do servidor');
+            console.error('Error getting overview stats:', error);
+            throw new Error('Internal server error');
         }
     }
 
     @UseGuards(JwtAuthGuard)
-    @Get('users/all')
+    @Get('users')
+    @ApiOperation({ summary: 'Get all users' })
+    @ApiResponse({ status: 200, description: 'Users retrieved successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 403, description: 'Access denied' })
     async getAllUsers(@Req() req) {
         const { type } = req.user;
 
         if (type !== "MASTER") {
-            throw new UnauthorizedException("Acesso negado. Apenas usuários Master podem acessar estas informações.");
+            throw new UnauthorizedException("Access denied. Only Master users can access this information.");
         }
 
         try {
@@ -138,18 +149,22 @@ export class AdminController {
             };
 
         } catch (error) {
-            console.error('Erro ao buscar usuários:', error);
-            throw new Error('Erro interno do servidor');
+            console.error('Error getting users:', error);
+            throw new Error('Internal server error');
         }
     }
 
     @UseGuards(JwtAuthGuard)
     @Get('users/professionals-detailed')
+    @ApiOperation({ summary: 'Get detailed professional users with statistics' })
+    @ApiResponse({ status: 200, description: 'Professional users with stats retrieved successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 403, description: 'Access denied' })
     async getProfessionalsDetailed(@Req() req) {
         const { type } = req.user;
 
         if (type !== "MASTER") {
-            throw new UnauthorizedException("Acesso negado. Apenas usuários Master podem acessar estas informações.");
+            throw new UnauthorizedException("Access denied. Only Master users can access this information.");
         }
 
         try {
@@ -184,34 +199,107 @@ export class AdminController {
             return { professionals: professionalsWithStats };
 
         } catch (error) {
-            console.error('Erro ao buscar profissionais detalhados:', error);
-            throw new Error('Erro interno do servidor');
+            console.error('Error getting detailed professionals:', error);
+            throw new Error('Internal server error');
         }
     }
 
     @UseGuards(JwtAuthGuard)
-    @Get('events/all')
+    @Get('events')
+    @ApiOperation({ summary: 'Get all events with statistics' })
+    @ApiResponse({ status: 200, description: 'Events with stats retrieved successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 403, description: 'Access denied' })
     async getAllEvents(@Req() req) {
         const { type } = req.user;
 
         if (type !== "MASTER") {
-            throw new UnauthorizedException("Acesso negado. Apenas usuários Master podem acessar estas informações.");
+            throw new UnauthorizedException("Access denied. Only Master users can access this information.");
         }
 
         try {
-            const { events } = await this.findAllEvents.execute();
-            const { tickets } = await this.findAllTickets.execute();
+            // Buscar eventos com tickets e vendas diretamente do Prisma
+            const events = await this.prisma.event.findMany({
+                include: {
+                    establishment: true,
+                    user: true,
+                    Ticket: {
+                        include: {
+                            TicketSale: {
+                                include: {
+                                    payment: true,
+                                    user: true
+                                }
+                            }
+                        }
+                    }
+                },
+                orderBy: {
+                    createdAt: 'desc'
+                }
+            });
 
             const eventsWithStats = events.map(event => {
-                const eventTickets = tickets.filter(ticket => ticket.eventId === event.id);
+                // Calcular estatísticas de vendas
+                let totalTicketsSold = 0;
+                let totalRevenue = 0;
+                let totalAvailable = 0;
+                const ticketTypes = [];
+
+                if (event.Ticket) {
+                    event.Ticket.forEach(ticket => {
+                        const completedSales = ticket.TicketSale.filter(sale => 
+                            sale.payment && sale.payment.status === "COMPLETED"
+                        );
+                        
+                        totalTicketsSold += completedSales.length;
+                        totalRevenue += completedSales.length * Number(ticket.price);
+                        totalAvailable += ticket.quantity_available;
+
+                        ticketTypes.push({
+                            id: ticket.id,
+                            description: ticket.description,
+                            price: Number(ticket.price),
+                            quantity_available: ticket.quantity_available,
+                            sold_count: completedSales.length,
+                            revenue: completedSales.length * Number(ticket.price),
+                            sales: ticket.TicketSale.map(sale => ({
+                                id: sale.id,
+                                payment: {
+                                    status: sale.payment?.status || 'PENDING'
+                                }
+                            }))
+                        });
+                    });
+                }
+
                 return {
-                    ...event.props,
                     id: event.id,
-                    user: event.user ? require('../view-models/user/user-view-model').UserViewModel.toHTTP(event.user) : null,
-                    establishment: event.establishment ? require('../view-models/establishment/establishment-view-model').EstablishmentViewModel.toHTTP(event.establishment) : null,
+                    name: event.name,
+                    description: event.description,
+                    dateTimestamp: event.dateTimestamp,
+                    endTimestamp: event.endTimestamp,
+                    photos: event.photos,
+                    isActive: event.isActive,
+                    createdAt: event.createdAt,
+                    updatedAt: event.updatedAt,
+                    user: event.user ? {
+                        uid: event.user.uid,
+                        name: event.user.name,
+                        email: event.user.email,
+                        type: event.user.type
+                    } : null,
+                    establishment: event.establishment ? {
+                        id: event.establishment.id,
+                        name: event.establishment.name,
+                        address: event.establishment.address
+                    } : null,
+                    tickets: ticketTypes,
                     stats: {
-                        totalTicketsSold: eventTickets.length,
-                        revenue: eventTickets.reduce((sum, ticket) => sum + (ticket.price || 0), 0),
+                        totalTicketsSold,
+                        totalRevenue,
+                        totalAvailable,
+                        ticketTypesCount: ticketTypes.length
                     }
                 };
             });
@@ -219,18 +307,22 @@ export class AdminController {
             return { events: eventsWithStats };
 
         } catch (error) {
-            console.error('Erro ao buscar eventos:', error);
-            throw new Error('Erro interno do servidor');
+            console.error('Error getting events:', error);
+            throw new Error('Internal server error');
         }
     }
 
     @UseGuards(JwtAuthGuard)
     @Get('stats/recent-activity')
+    @ApiOperation({ summary: 'Get recent system activity' })
+    @ApiResponse({ status: 200, description: 'Recent activity retrieved successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 403, description: 'Access denied' })
     async getRecentActivity(@Req() req, @Query('days') days: string = '7') {
         const { type } = req.user;
 
         if (type !== "MASTER") {
-            throw new UnauthorizedException("Acesso negado. Apenas usuários Master podem acessar estas informações.");
+            throw new UnauthorizedException("Access denied. Only Master users can access this information.");
         }
 
         try {
@@ -248,7 +340,7 @@ export class AdminController {
             const recentTickets = tickets.filter(ticket => new Date(ticket.createdAt) >= cutoffDate);
 
             return {
-                period: `${days} dias`,
+                period: `${days} days`,
                 newUsers: recentUsers.length,
                 newEvents: recentEvents.length,
                 newTickets: recentTickets.length,
@@ -261,74 +353,22 @@ export class AdminController {
             };
 
         } catch (error) {
-            console.error('Erro ao buscar atividade recente:', error);
-            throw new Error('Erro interno do servidor');
+            console.error('Error getting recent activity:', error);
+            throw new Error('Internal server error');
         }
     }
 
     @UseGuards(JwtAuthGuard)
-    @Get('stats/top-performers')
-    async getTopPerformers(@Req() req) {
-        const { type } = req.user;
-
-        if (type !== "MASTER") {
-            throw new UnauthorizedException("Acesso negado. Apenas usuários Master podem acessar estas informações.");
-        }
-
-        try {
-            const { events } = await this.findAllEvents.execute();
-            const { tickets } = await this.findAllTickets.execute();
-            const { userData } = await this.findAllProfessionals.execute();
-
-            // Calcular performance por profissional
-            const performers = userData.map(data => {
-                const userEvents = events.filter(event => event.userOwnerId === data.user.id);
-                const userTickets = tickets.filter(ticket => 
-                    userEvents.some(event => event.id === ticket.eventId)
-                );
-
-                const totalRevenue = userTickets.reduce((sum, ticket) => sum + (ticket.price || 0), 0);
-
-                return {
-                    user: {
-                        id: data.user.id,
-                        name: data.user.name,
-                        email: data.user.email,
-                        type: data.user.type
-                    },
-                    establishment: data.establishment ? {
-                        id: data.establishment.id,
-                        name: data.establishment.name
-                    } : null,
-                    stats: {
-                        totalEvents: userEvents.length,
-                        totalTicketsSold: userTickets.length,
-                        totalRevenue: totalRevenue,
-                        averageRevenuePerEvent: userEvents.length > 0 ? totalRevenue / userEvents.length : 0
-                    }
-                };
-            });
-
-            // Ordenar por receita total
-            performers.sort((a, b) => b.stats.totalRevenue - a.stats.totalRevenue);
-
-            return {
-                topPerformers: performers.slice(0, 10) // Top 10
-            };
-
-        } catch (error) {
-            console.error('Erro ao buscar top performers:', error);
-            throw new Error('Erro interno do servidor');
-        }
-    }
-
-    @UseGuards(JwtAuthGuard)
-    @Get('tickets/all')
+    @Get('tickets')
+    @ApiOperation({ summary: 'Get all tickets' })
+    @ApiResponse({ status: 200, description: 'Tickets retrieved successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 403, description: 'Access denied' })
     async getAllTickets(@Req() req) {
         const { type } = req.user;
 
         if (type !== "MASTER") {
-            throw new UnauthorizedException("Acesso negado. Apenas usuários Master podem acessar estas informações.");
+            throw new UnauthorizedException("Access denied. Only Master users can access this information.");
         }
 
         try {
@@ -354,17 +394,21 @@ export class AdminController {
             };
 
         } catch (error) {
-            console.error('Erro ao buscar tickets:', error);
-            throw new Error('Erro interno do servidor');
+            console.error('Error getting tickets:', error);
+            throw new Error('Internal server error');
         }
     }
 
     @UseGuards(JwtAuthGuard)
     @Get('config')
+    @ApiOperation({ summary: 'Get system configuration' })
+    @ApiResponse({ status: 200, description: 'System configuration retrieved successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 403, description: 'Access denied' })
     async getSystemConfig(@Req() req) {
         const { type } = req.user;
         if (type !== "MASTER") {
-            throw new UnauthorizedException("Acesso negado. Apenas usuários Master podem acessar estas informações.");
+            throw new UnauthorizedException("Access denied. Only Master users can access this information.");
         }
         // Configuração mockada
         return {
@@ -395,17 +439,6 @@ export class AdminController {
         };
     }
 
-    @UseGuards(JwtAuthGuard)
-    @Put('config')
-    async updateSystemConfig(@Req() req, @Body() body: any) {
-        const { type } = req.user;
-        if (type !== "MASTER") {
-            throw new UnauthorizedException("Acesso negado. Apenas usuários Master podem acessar estas informações.");
-        }
-        // Apenas retorna sucesso (mock)
-        return { message: 'Configurações salvas com sucesso!' };
-    }
-
     // Endpoints para gerenciar usuários TICKETTAKER
     // 
     // TICKETTAKER tem função única e específica:
@@ -421,509 +454,247 @@ export class AdminController {
     // - Logs de auditoria (EventAudit, TicketAudit, etc.)
     @UseGuards(JwtAuthGuard)
     @Get('users/ticket-takers')
+    @ApiOperation({ summary: 'Get ticket takers' })
+    @ApiResponse({ status: 200, description: 'Ticket takers retrieved successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 403, description: 'Access denied' })
     async getTicketTakers(@Req() req) {
         const { type, userId } = req.user;
 
         // Permitir acesso para MASTER e usuários profissionais
         if (type !== "MASTER" && type !== "PROFESSIONAL_OWNER" && type !== "PROFESSIONAL_PROMOTER") {
-            throw new UnauthorizedException("Acesso negado.");
+            throw new UnauthorizedException("Access denied.");
         }
 
         try {
-            // Se for MASTER, mostrar todos os TICKETTAKER
+            let ticketTakers = [];
+
             if (type === "MASTER") {
+                // MASTER pode ver todos os ticket takers
                 const { users } = await this.findAllUsers.execute();
-                const ticketTakers = users.filter(user => user.type === 'TICKETTAKER');
+                const ticketTakerUsers = users.filter(user => user.type === 'TICKETTAKER');
                 
-                return {
-                    ticketTakers: ticketTakers.map(user => ({
-                        uid: user.id,
-                        name: user.name,
-                        email: user.email,
-                        type: user.type,
-                        isActive: user.isActive,
-                        createdAt: user.createdAt
-                    }))
-                };
+                // Buscar informações dos ticket takers
+                const ticketTakerData = await Promise.all(
+                    ticketTakerUsers.map(async (user) => {
+                        const ticketTaker = await this.prisma.ticketTaker.findFirst({
+                            where: { userTicketTakerUid: user.uid }
+                        });
+                        
+                        return {
+                            uid: user.uid,
+                            name: user.name,
+                            email: user.email,
+                            phone: user.phone,
+                            createdAt: user.createdAt,
+                            isActive: user.isActive,
+                            ownerUid: ticketTaker?.userOwnerUid || null,
+                            ownerName: ticketTaker?.userOwnerUid ? await this.getOwnerName(ticketTaker.userOwnerUid) : null
+                        };
+                    })
+                );
+                
+                ticketTakers = ticketTakerData;
             } else {
-                // Para usuários profissionais, mostrar apenas os TICKETTAKER criados por eles
+                // Usuários profissionais veem apenas seus próprios ticket takers
                 const { users } = await this.findTicketsTakerByOwner.execute({ userOwnerUid: userId });
                 
-                return {
-                    ticketTakers: users.map(user => ({
-                        uid: user.id,
-                        name: user.name,
-                        email: user.email,
-                        type: user.type,
-                        isActive: user.isActive,
-                        createdAt: user.createdAt
-                    }))
-                };
+                // Buscar informações dos ticket takers
+                const ticketTakerData = await Promise.all(
+                    users.map(async (user) => {
+                        const ticketTaker = await this.prisma.ticketTaker.findFirst({
+                            where: { 
+                                userTicketTakerUid: user.uid,
+                                userOwnerUid: userId
+                            }
+                        });
+                        
+                        return {
+                            uid: user.uid,
+                            name: user.name,
+                            email: user.email,
+                            phone: user.phone,
+                            createdAt: user.createdAt,
+                            isActive: user.isActive,
+                            ownerUid: ticketTaker?.userOwnerUid || userId
+                        };
+                    })
+                );
+                
+                ticketTakers = ticketTakerData;
             }
 
+            return { ticketTakers };
+
         } catch (error) {
-            console.error('Erro ao buscar ticket takers:', error);
-            throw new Error('Erro interno do servidor');
+            console.error('Error getting ticket takers:', error);
+            throw new Error('Internal server error');
+        }
+    }
+
+    // Helper method para buscar nome do owner
+    private async getOwnerName(ownerUid: string): Promise<string | null> {
+        try {
+            const owner = await this.prisma.user.findUnique({
+                where: { uid: ownerUid },
+                select: { name: true }
+            });
+            return owner?.name || null;
+        } catch (error) {
+            console.error('Error getting owner name:', error);
+            return null;
         }
     }
 
     @UseGuards(JwtAuthGuard)
-    @Post('users/create-ticket-taker')
-    async createTicketTaker(@Req() req, @Body() body: { name: string; email: string; password: string }) {
+    @Post('users/ticket-takers')
+    @ApiOperation({ summary: 'Create ticket taker' })
+    @ApiResponse({ status: 201, description: 'Ticket taker created successfully' })
+    @ApiResponse({ status: 400, description: 'Invalid data' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 403, description: 'Access denied' })
+    async createTicketTaker(@Req() req, @Body() body: any) {
         const { type, userId } = req.user;
 
         // Permitir acesso para MASTER e usuários profissionais
         if (type !== "MASTER" && type !== "PROFESSIONAL_OWNER" && type !== "PROFESSIONAL_PROMOTER") {
-            throw new UnauthorizedException("Acesso negado.");
-        }
-
-        // Validações dos campos obrigatórios
-        if (!body.name || !body.name.trim()) {
-            throw new BadRequestException('Nome é obrigatório.');
-        }
-
-        if (!body.email || !body.email.trim()) {
-            throw new BadRequestException('Email é obrigatório.');
-        }
-
-        if (!body.password || !body.password.trim()) {
-            throw new BadRequestException('Senha é obrigatória.');
-        }
-
-        // Validar formato do email
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(body.email.trim())) {
-            throw new BadRequestException('Formato de email inválido.');
-        }
-
-        // Validar tamanho mínimo da senha
-        if (body.password.trim().length < 6) {
-            throw new BadRequestException('Senha deve ter pelo menos 6 caracteres.');
+            throw new UnauthorizedException("Access denied.");
         }
 
         try {
-            // Verificar se já existe um TICKETTAKER com este email
-            const existingUser = await this.prisma.user.findUnique({
-                where: { email: body.email }
+            const { email, name, password, phone, birthDate } = body;
+
+            // Criar usuário
+            const { user } = await this.createUser.execute({
+                email,
+                name,
+                password,
+                phone,
+                birthDate,
+                type: 'TICKETTAKER',
+                isOwnerOfEstablishment: false,
+                address: null,
+                avatar: null,
+                document: null
             });
 
-            if (existingUser) {
-                // Se o usuário existe mas não é TICKETTAKER, retornar erro
-                if (existingUser.type !== 'TICKETTAKER') {
-                    throw new Error('Este email já está sendo usado por outro tipo de usuário.');
-                }
-
-                // Se já é TICKETTAKER, verificar se já está vinculado ao usuário atual
-                const existingTicketTaker = await this.prisma.ticketTaker.findFirst({
-                    where: {
-                        userOwnerUid: userId,
-                        userTicketTakerUid: existingUser.uid
-                    }
-                });
-
-                if (existingTicketTaker) {
-                    throw new Error('Este administrador já está vinculado ao seu perfil.');
-                }
-
-                throw new Error('Este administrador já existe no sistema. Use o botão "Buscar Existentes" para vincular um administrador já cadastrado.');
-            }
-
-            // Se não existe, criar novo TICKETTAKER
-            const { user } = await this.createTicketTakerUseCase.execute({
-                userOwnerUid: userId,
-                name: body.name,
-                email: body.email
-            });
-            return {
-                message: 'Administrador criado com sucesso!',
-                user: {
-                    id: user.id,
-                    name: user.name,
-                    email: user.email,
-                    type: user.type
-                }
-            };
-
-        } catch (error) {
-            console.error('Erro ao criar/vincular ticket taker:', error);
-            
-            // Se for BadRequestException do CreateUser (email já existe)
-            if (error instanceof BadRequestException) {
-                throw error;
-            }
-            
-            if (error.message.includes('Este email já está sendo usado por outro tipo de usuário')) {
-                throw new BadRequestException('Este email já está sendo usado por outro tipo de usuário.');
-            }
-            
-            if (error.message.includes('Este administrador já está vinculado ao seu perfil')) {
-                throw new BadRequestException('Este administrador já está vinculado ao seu perfil.');
-            }
-            
-            if (error.message.includes('Este administrador já existe no sistema')) {
-                throw new BadRequestException('Este administrador já existe no sistema. Use o botão "Buscar Existentes" para vincular um administrador já cadastrado.');
-            }
-            
-            throw new InternalServerErrorException('Erro interno do servidor');
-        }
-    }
-
-    @UseGuards(JwtAuthGuard)
-    @Get('users/check-unlink/:id')
-    async checkUnlinkTicketTaker(@Param("id") id: string, @Req() req) {
-        const { type, userId, uid } = req.user;
-        const userOwnerUid = userId || uid;
-
-        // Permitir acesso para MASTER e usuários profissionais
-        if (type !== "MASTER" && type !== "PROFESSIONAL_OWNER" && type !== "PROFESSIONAL_PROMOTER") {
-            throw new UnauthorizedException("Acesso negado.");
-        }
-
-        try {
-            // Se não for MASTER, verificar se o TICKETTAKER pertence ao usuário
-            if (type !== "MASTER") {
-                try {
-                    const { users } = await this.findTicketsTakerByOwner.execute({ userOwnerUid });
-                    const userExists = users.find(u => u.id === id || u.uid === id);
-                    
-                    if (!userExists) {
-                        throw new UnauthorizedException("Não permitido verificar este administrador.");
-                    }
-                } catch (error) {
-                    console.error('Erro ao verificar permissão:', error);
-                    throw new UnauthorizedException("Erro ao verificar permissões.");
-                }
-            }
-
-            // Buscar o usuário TICKETTAKER para obter o email
-            const ticketTakerUser = await this.prisma.user.findUnique({
-                where: { uid: id }
-            });
-
-            if (!ticketTakerUser) {
-                throw new Error('Usuário TICKETTAKER não encontrado.');
-            }
-
-            // Buscar todos os eventos onde este TICKETTAKER está associado
-            const eventsWithTicketTaker = await this.prisma.event.findMany({
-                where: {
-                    ticketTakers: {
-                        has: ticketTakerUser.email
-                    }
-                },
-                select: {
-                    id: true,
-                    name: true,
-                    dateTimestamp: true
+            // Criar ticket taker manualmente
+            const ticketTaker = await this.prisma.ticketTaker.create({
+                data: {
+                    userOwnerUid: userId,
+                    userTicketTakerUid: user.id
                 }
             });
 
             return {
-                ticketTaker: {
-                    id: ticketTakerUser.uid,
-                    name: ticketTakerUser.name,
-                    email: ticketTakerUser.email
-                },
-                eventsAffected: eventsWithTicketTaker,
-                totalEventsAffected: eventsWithTicketTaker.length,
-                warning: eventsWithTicketTaker.length > 0 
-                    ? `Este administrador está associado a ${eventsWithTicketTaker.length} evento(s). Ao desvinculá-lo, ele será removido de todos os eventos automaticamente.`
-                    : "Este administrador não está associado a nenhum evento."
+                message: 'Recepcionista criado com sucesso!',
+                user: UserViewModel.toHTTP(user)
             };
 
         } catch (error) {
-            console.error('Erro ao verificar ticket taker:', error);
-            
-            if (error.message.includes('Usuário TICKETTAKER não encontrado')) {
-                throw new BadRequestException('Usuário TICKETTAKER não encontrado no sistema.');
+            console.error('Error creating ticket taker:', error);
+            // Se for erro de email já cadastrado, retorne 400 com mensagem amigável
+            if (error.code === 'P2002' || error.message?.includes('email') || error.message?.includes('cadastrado')) {
+                throw new BadRequestException('Endereço de email já cadastrado.');
             }
-            
-            throw new InternalServerErrorException('Erro interno do servidor');
+            throw new InternalServerErrorException('Erro interno ao criar recepcionista.');
         }
     }
 
     @UseGuards(JwtAuthGuard)
-    @Delete('users/unlink/:id')
-    async unlinkTicketTaker(@Param("id") id: string, @Req() req) {
-        const { type, userId, uid } = req.user;
-        const userOwnerUid = userId || uid;
+    @Delete('users/ticket-takers/:id')
+    @ApiOperation({ summary: 'Delete ticket taker' })
+    @ApiResponse({ status: 200, description: 'Ticket taker deleted successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 403, description: 'Access denied' })
+    @ApiResponse({ status: 404, description: 'Ticket taker not found' })
+    async deleteTicketTaker(@Param("id") id: string, @Req() req) {
+        const { type, userId } = req.user;
 
         // Permitir acesso para MASTER e usuários profissionais
         if (type !== "MASTER" && type !== "PROFESSIONAL_OWNER" && type !== "PROFESSIONAL_PROMOTER") {
-            throw new UnauthorizedException("Acesso negado.");
+            throw new UnauthorizedException("Access denied.");
         }
 
         try {
-            // Se não for MASTER, verificar se o TICKETTAKER pertence ao usuário
-            if (type !== "MASTER") {
-                try {
-                    const { users } = await this.findTicketsTakerByOwner.execute({ userOwnerUid });
-                    const userExists = users.find(u => u.id === id || u.uid === id);
-                    
-                    if (!userExists) {
-                        throw new UnauthorizedException("Não permitido desvincular este administrador.");
-                    }
-                } catch (error) {
-                    console.error('Erro ao verificar permissão:', error);
-                    throw new UnauthorizedException("Erro ao verificar permissões.");
-                }
-            }
-
-            // Buscar o usuário TICKETTAKER para obter o email
-            const ticketTakerUser = await this.prisma.user.findUnique({
-                where: { uid: id }
-            });
-
-            if (!ticketTakerUser) {
-                throw new Error('Usuário TICKETTAKER não encontrado.');
-            }
-
-            // Encontrar e deletar apenas a associação TicketTaker
-            const ticketTaker = await this.prisma.ticketTaker.findFirst({
-                where: {
-                    userOwnerUid: userOwnerUid,
-                    userTicketTakerUid: id
-                }
+            // Buscar o ticket taker
+            const ticketTaker = await this.prisma.ticketTaker.findUnique({
+                where: { id }
             });
 
             if (!ticketTaker) {
-                throw new Error('Associação não encontrada.');
+                throw new BadRequestException('Ticket taker not found');
+            }
+
+            // Verificar permissões
+            if (type !== "MASTER" && ticketTaker.userOwnerUid !== userId) {
+                throw new UnauthorizedException("You can only delete your own ticket takers");
             }
 
             // DEBUG LOGS
-            console.log('TicketTaker a desvincular:', ticketTakerUser.email, ticketTakerUser.uid);
+            console.log('TicketTaker to unlink:', ticketTaker.userTicketTakerUid);
 
-            // Buscar todos os eventos onde este TICKETTAKER está associado (pelo email no array)
-            const eventsWithTicketTaker = await this.prisma.event.findMany({
+            // Buscar todos os eventos onde este TICKETTAKER está associado (pela tabela eventsReceptionist)
+            const eventsWithTicketTaker = await this.prisma.eventsReceptionist.findMany({
                 where: {
-                    ticketTakers: {
-                        has: ticketTakerUser.email
-                    }
+                    useruid: ticketTaker.userTicketTakerUid
+                },
+                include: {
+                    event: true
                 }
             });
 
-            console.log('Eventos encontrados para esse TicketTaker (pelo email):', eventsWithTicketTaker.map(e => ({ id: e.id, ticketTakers: e.ticketTakers })));
-
-            // Remover o TICKETTAKER de todos os eventos onde está associado (pelo array)
-            for (const event of eventsWithTicketTaker) {
-                const updatedTicketTakers = event.ticketTakers.filter(
-                    (takerEmail: string) => takerEmail !== ticketTakerUser.email
-                );
-
-                await this.prisma.event.update({
-                    where: { id: event.id },
-                    data: {
-                        ticketTakers: updatedTicketTakers
-                    }
-                });
-            }
+            console.log('Events found for this TicketTaker:', eventsWithTicketTaker.map(e => ({ id: e.event.id, name: e.event.name })));
 
             // Remover todas as associações na tabela eventsReceptionist para esse TicketTaker
             const allEventManagers = await this.prisma.eventsReceptionist.findMany({
-                where: { useruid: id }
+                where: { useruid: ticketTaker.userTicketTakerUid }
             });
 
-            console.log('Associações na tabela eventsReceptionist antes da deleção:', allEventManagers.map(e => ({ id: e.id, eventId: e.eventId, useruid: e.useruid })));
+            console.log('Associations in eventsReceptionist table before deletion:', allEventManagers.map(e => ({ id: e.id, eventId: e.eventId, useruid: e.useruid })));
 
             const deleteResult = await this.prisma.eventsReceptionist.deleteMany({
-                where: { useruid: id }
+                where: { useruid: ticketTaker.userTicketTakerUid }
             });
 
-            console.log('Total de vínculos removidos da tabela eventsReceptionist:', deleteResult.count);
-
-            // Para cada evento afetado, atualizar o campo ticketTakers
-            for (const eventManager of allEventManagers) {
-                // Buscar todos os vínculos ativos na tabela eventsReceptionist para esse evento
-                const managers = await this.prisma.eventsReceptionist.findMany({
-                    where: { eventId: eventManager.eventId },
-                    include: { user: true }
-                });
-
-                // Atualizar o campo ticketTakers do evento
-                const ticketTakers = managers.map(m => m.user.email);
-                await this.prisma.event.update({
-                    where: { id: eventManager.eventId },
-                    data: { ticketTakers }
-                });
-            }
+            console.log('Total links removed from eventsReceptionist table:', deleteResult.count);
 
             // Verificar se ainda há vínculos após a deleção
             const allEventManagersAfter = await this.prisma.eventsReceptionist.findMany({
-                where: { useruid: id }
+                where: { useruid: ticketTaker.userTicketTakerUid }
             });
 
-            console.log('Associações na tabela eventsReceptionist após deleção:', allEventManagersAfter.map(e => ({ id: e.id, eventId: e.eventId, useruid: e.useruid })));
+            console.log('Associations in eventsReceptionist table after deletion:', allEventManagersAfter.map(e => ({ id: e.id, eventId: e.eventId, useruid: e.useruid })));
 
             // Deletar apenas a associação, não o usuário
             await this.prisma.ticketTaker.delete({
                 where: { id: ticketTaker.id }
             });
 
-            return { 
-                message: 'Administrador desvinculado com sucesso!',
-                eventsUpdated: eventsWithTicketTaker.length,
-                ticketTakerRemoved: {
-                    name: ticketTakerUser.name,
-                    email: ticketTakerUser.email
-                }
-            };
+            // Deletar o usuário também
+            await this.deleteUserById.execute({ id: ticketTaker.userTicketTakerUid });
+
+            return { message: 'Ticket taker deleted successfully' };
 
         } catch (error) {
-            console.error('Erro ao desvincular ticket taker:', error);
-            
-            if (error.message.includes('Associação não encontrada')) {
-                throw new BadRequestException('Associação não encontrada no sistema.');
-            }
-            
-            if (error.message.includes('Usuário TICKETTAKER não encontrado')) {
-                throw new BadRequestException('Usuário TICKETTAKER não encontrado no sistema.');
-            }
-            
-            throw new InternalServerErrorException('Erro interno do servidor');
+            console.error('Error deleting ticket taker:', error);
+            throw new Error('Internal server error');
         }
-    }
-
-    @UseGuards(JwtAuthGuard)
-    @Get('users/search-ticket-takers')
-    async searchTicketTakers(
-      @Query('q') searchTerm: string,
-      @Request() req: any
-    ) {
-      try {
-        const user = req.user;
-        
-        // Verificar permissões
-        if (!['MASTER', 'PROFESSIONAL_OWNER', 'PROFESSIONAL_PROMOTER'].includes(user.type)) {
-          throw new UnauthorizedException('Acesso negado');
-        }
-
-        if (!searchTerm || searchTerm.trim().length < 2) {
-          throw new BadRequestException('Termo de busca deve ter pelo menos 2 caracteres');
-        }
-
-        // Buscar TICKETTAKER que contenham o termo no nome ou email
-        const ticketTakers = await this.prisma.user.findMany({
-          where: {
-            type: 'TICKETTAKER',
-            isActive: true,
-            OR: [
-              {
-                name: {
-                  contains: searchTerm.trim(),
-                  mode: 'insensitive'
-                }
-              },
-              {
-                email: {
-                  contains: searchTerm.trim(),
-                  mode: 'insensitive'
-                }
-              }
-            ]
-          },
-                  select: {
-          uid: true,
-          name: true,
-          email: true,
-          type: true,
-          isActive: true,
-          createdAt: true
-        },
-          take: 10 // Limitar a 10 resultados
-        });
-
-        return {
-          success: true,
-          ticketTakers
-        };
-        
-      } catch (error) {
-        if (error instanceof BadRequestException || error instanceof UnauthorizedException) {
-          throw error;
-        }
-        
-        // this.logger.error('Erro ao buscar TICKETTAKER:', error); // Assuming logger is available
-        throw new InternalServerErrorException('Erro interno do servidor');
-      }
-    }
-
-    @UseGuards(JwtAuthGuard)
-    @Post('users/link-ticket-taker')
-    async linkTicketTaker(
-      @Body() body: { ticketTakerId: string },
-      @Request() req: any
-    ) {
-      try {
-        const user = req.user;
-        
-        // Verificar permissões
-        if (!['MASTER', 'PROFESSIONAL_OWNER', 'PROFESSIONAL_PROMOTER'].includes(user.type)) {
-          throw new UnauthorizedException('Acesso negado');
-        }
-
-        if (!body.ticketTakerId) {
-          throw new BadRequestException('ID do TICKETTAKER é obrigatório');
-        }
-
-        if (!user.uid) {
-          throw new BadRequestException('ID do usuário não encontrado');
-        }
-
-        // Verificar se o TICKETTAKER existe
-        const ticketTaker = await this.prisma.user.findUnique({
-          where: {
-            uid: body.ticketTakerId,
-            type: 'TICKETTAKER'
-          }
-        });
-
-        if (!ticketTaker) {
-          throw new BadRequestException('TICKETTAKER não encontrado');
-        }
-
-        // Verificar se já existe a associação
-        const existingLink = await this.prisma.ticketTaker.findFirst({
-          where: {
-            userTicketTakerUid: body.ticketTakerId,
-            userOwnerUid: user.uid
-          }
-        });
-
-        if (existingLink) {
-          throw new BadRequestException('Este administrador já está vinculado ao seu perfil');
-        }
-
-        // Criar a associação
-        await this.prisma.ticketTaker.create({
-          data: {
-            userTicketTakerUid: body.ticketTakerId,
-            userOwnerUid: user.uid
-          }
-        });
-
-        return {
-          success: true,
-          message: 'Administrador vinculado com sucesso'
-        };
-        
-      } catch (error) {
-        if (error instanceof BadRequestException || error instanceof UnauthorizedException) {
-          throw error;
-        }
-        
-        throw new InternalServerErrorException('Erro interno do servidor');
-      }
     }
 
     // Endpoint para validação de tickets (função principal do TICKETTAKER)
     @UseGuards(JwtAuthGuard)
     @Post('tickets/validate')
+    @ApiOperation({ summary: 'Validate ticket (main TICKETTAKER function)' })
+    @ApiResponse({ status: 200, description: 'Ticket validation result' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 403, description: 'Access denied' })
     async validateTicket(@Req() req, @Body() body: { ticketId: string; qrCode: string }) {
         const { type } = req.user;
 
         // Apenas TICKETTAKER pode validar tickets
         if (type !== "TICKETTAKER") {
-            throw new UnauthorizedException("Apenas administradores de eventos podem validar tickets.");
+            throw new UnauthorizedException("Only ticket takers can validate tickets.");
         }
 
         try {
@@ -935,15 +706,354 @@ export class AdminController {
             // 5. Retornar confirmação
 
             return {
-                message: 'Ticket válido!',
+                message: 'Ticket valid!',
                 ticketId: body.ticketId,
                 validated: true,
                 timestamp: new Date().toISOString()
             };
 
         } catch (error) {
-            console.error('Erro ao validar ticket:', error);
-            throw new Error('Erro interno do servidor');
+            console.error('Error validating ticket:', error);
+            throw new Error('Internal server error');
+        }
+    }
+
+    // Endpoint para exportar relatórios
+    @UseGuards(JwtAuthGuard)
+    @Get('reports/export/:type')
+    @ApiOperation({ summary: 'Export reports' })
+    @ApiResponse({ status: 200, description: 'Report exported successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 403, description: 'Access denied' })
+    async exportReport(@Req() req, @Param('type') type: string, @Query() query: any) {
+        const { type: userType } = req.user;
+
+        if (userType !== "MASTER") {
+            throw new UnauthorizedException("Access denied. Only Master users can access this information.");
+        }
+
+        try {
+            // Buscar dados baseados no tipo de relatório
+            let reportData = {};
+
+            switch (type) {
+                case 'general':
+                    // Relatório geral com estatísticas
+                    const { users } = await this.findAllUsers.execute();
+                    const { events } = await this.findAllEvents.execute();
+                    const { tickets } = await this.findAllTickets.execute();
+
+                    reportData = {
+                        totalUsers: users.length,
+                        totalEvents: events.length,
+                        totalTickets: tickets.length,
+                        usersByType: {
+                            personal: users.filter(user => user.type === 'PERSONAL').length,
+                            professionalOwner: users.filter(user => user.type === 'PROFESSIONAL_OWNER').length,
+                            professionalPromoter: users.filter(user => user.type === 'PROFESSIONAL_PROMOTER').length,
+                            ticketTaker: users.filter(user => user.type === 'TICKETTAKER').length,
+                            master: users.filter(user => user.type === 'MASTER').length,
+                        },
+                        activeEvents: events.filter(event => new Date(event.endDate) > new Date()).length,
+                        completedEvents: events.filter(event => new Date(event.endDate) <= new Date()).length,
+                    };
+                    break;
+
+                case 'events':
+                    // Relatório de eventos
+                    const eventsWithStats = await this.prisma.event.findMany({
+                        include: {
+                            establishment: true,
+                            user: true,
+                            Ticket: {
+                                include: {
+                                    TicketSale: {
+                                        include: {
+                                            payment: true
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        orderBy: {
+                            createdAt: 'desc'
+                        }
+                    });
+
+                    reportData = {
+                        events: eventsWithStats.map(event => {
+                            let totalRevenue = 0;
+                            let totalSales = 0;
+
+                            if (event.Ticket) {
+                                event.Ticket.forEach(ticket => {
+                                    const completedSales = ticket.TicketSale.filter(sale => 
+                                        sale.payment && sale.payment.status === "COMPLETED"
+                                    );
+                                    totalSales += completedSales.length;
+                                    totalRevenue += completedSales.length * Number(ticket.price);
+                                });
+                            }
+
+                            return {
+                                id: event.id,
+                                name: event.name,
+                                establishment: event.establishment?.name || 'N/A',
+                                date: event.dateTimestamp,
+                                totalSales,
+                                totalRevenue,
+                                status: event.isActive ? 'Ativo' : 'Inativo'
+                            };
+                        })
+                    };
+                    break;
+
+                case 'users':
+                    // Relatório de usuários
+                    const allUsers = await this.prisma.user.findMany({
+                        include: {
+                            Establishment: true
+                        },
+                        orderBy: {
+                            createdAt: 'desc'
+                        }
+                    });
+
+                    reportData = {
+                        users: allUsers.map(user => ({
+                            id: user.uid,
+                            name: user.name,
+                            email: user.email,
+                            type: user.type,
+                            isActive: user.isActive,
+                            createdAt: user.createdAt,
+                            establishment: user.Establishment?.[0]?.name || 'N/A'
+                        }))
+                    };
+                    break;
+
+                default:
+                    throw new BadRequestException('Tipo de relatório inválido');
+            }
+
+            return reportData;
+
+        } catch (error) {
+            console.error('Error exporting report:', error);
+            throw new Error('Internal server error');
+        }
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Get('users/check-unlink/:uid')
+    @ApiOperation({ summary: 'Check consequences of unlinking ticket taker' })
+    @ApiResponse({ status: 200, description: 'Check completed' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 404, description: 'Ticket taker not found' })
+    async checkUnlinkTicketTaker(@Param("uid") uid: string, @Req() req) {
+        const { type, userId } = req.user;
+
+        // Permitir acesso para MASTER e usuários profissionais
+        if (type !== "MASTER" && type !== "PROFESSIONAL_OWNER" && type !== "PROFESSIONAL_PROMOTER") {
+            throw new UnauthorizedException("Access denied.");
+        }
+
+        try {
+            // Buscar o ticket taker pelo UID do usuário
+            const ticketTaker = await this.prisma.ticketTaker.findFirst({
+                where: { 
+                    userTicketTakerUid: uid,
+                    userOwnerUid: userId
+                }
+            });
+
+            if (!ticketTaker) {
+                throw new BadRequestException('Recepcionista não encontrado');
+            }
+
+            // Buscar todos os eventos onde este TICKETTAKER está associado
+            const eventsWithTicketTaker = await this.prisma.eventsReceptionist.findMany({
+                where: {
+                    useruid: uid
+                },
+                include: {
+                    event: true
+                }
+            });
+
+            const totalEventsAffected = eventsWithTicketTaker.length;
+            const eventsAffected = eventsWithTicketTaker.map(e => ({
+                id: e.event.id,
+                name: e.event.name,
+                dateTimestamp: e.event.dateTimestamp
+            }));
+
+            let warning = null;
+            if (totalEventsAffected > 0) {
+                warning = `Este recepcionista está vinculado a ${totalEventsAffected} evento(s). Ao desvincular, ele não poderá mais validar ingressos nesses eventos.`;
+            }
+
+            return {
+                eventsAffected,
+                totalEventsAffected,
+                warning
+            };
+
+        } catch (error) {
+            console.error('Error checking unlink consequences:', error);
+            throw new Error('Internal server error');
+        }
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Delete('users/unlink/:uid')
+    @ApiOperation({ summary: 'Unlink ticket taker' })
+    @ApiResponse({ status: 200, description: 'Ticket taker unlinked successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 404, description: 'Ticket taker not found' })
+    async unlinkTicketTaker(@Param("uid") uid: string, @Req() req) {
+        const { type, userId } = req.user;
+
+        // Permitir acesso para MASTER e usuários profissionais
+        if (type !== "MASTER" && type !== "PROFESSIONAL_OWNER" && type !== "PROFESSIONAL_PROMOTER") {
+            throw new UnauthorizedException("Access denied.");
+        }
+
+        try {
+            // Buscar o ticket taker pelo UID do usuário
+            const ticketTaker = await this.prisma.ticketTaker.findFirst({
+                where: { 
+                    userTicketTakerUid: uid,
+                    userOwnerUid: userId
+                }
+            });
+
+            if (!ticketTaker) {
+                throw new BadRequestException('Recepcionista não encontrado');
+            }
+
+            // Remover todas as associações na tabela eventsReceptionist para esse TicketTaker
+            const deleteResult = await this.prisma.eventsReceptionist.deleteMany({
+                where: { useruid: uid }
+            });
+
+            // Deletar apenas a associação, não o usuário
+            await this.prisma.ticketTaker.delete({
+                where: { id: ticketTaker.id }
+            });
+
+            return { 
+                message: 'Recepcionista desvinculado com sucesso!',
+                eventsUpdated: deleteResult.count
+            };
+
+        } catch (error) {
+            console.error('Error unlinking ticket taker:', error);
+            throw new Error('Internal server error');
+        }
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Get('users/search-ticket-takers')
+    @ApiOperation({ summary: 'Search existing ticket takers' })
+    @ApiResponse({ status: 200, description: 'Search completed' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    async searchTicketTakers(@Query('q') query: string, @Req() req) {
+        const { type, userId } = req.user;
+
+        // Permitir acesso para MASTER e usuários profissionais
+        if (type !== "MASTER" && type !== "PROFESSIONAL_OWNER" && type !== "PROFESSIONAL_PROMOTER") {
+            throw new UnauthorizedException("Access denied.");
+        }
+
+        try {
+            // Buscar usuários do tipo TICKETTAKER que não estão vinculados ao usuário atual
+            const ticketTakers = await this.prisma.user.findMany({
+                where: {
+                    type: 'TICKETTAKER',
+                    OR: [
+                        { name: { contains: query, mode: 'insensitive' } },
+                        { email: { contains: query, mode: 'insensitive' } }
+                    ],
+                    // Excluir os que já estão vinculados ao usuário atual
+                    NOT: {
+                        TicketTaker: {
+                            some: {
+                                userOwnerUid: userId
+                            }
+                        }
+                    }
+                },
+                select: {
+                    uid: true,
+                    name: true,
+                    email: true,
+                    isActive: true,
+                    createdAt: true
+                }
+            });
+
+            return { ticketTakers };
+
+        } catch (error) {
+            console.error('Error searching ticket takers:', error);
+            throw new Error('Internal server error');
+        }
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Post('users/link-ticket-taker')
+    @ApiOperation({ summary: 'Link existing ticket taker' })
+    @ApiResponse({ status: 200, description: 'Ticket taker linked successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 404, description: 'Ticket taker not found' })
+    async linkTicketTaker(@Body() body: { ticketTakerId: string }, @Req() req) {
+        const { type, userId } = req.user;
+
+        // Permitir acesso para MASTER e usuários profissionais
+        if (type !== "MASTER" && type !== "PROFESSIONAL_OWNER" && type !== "PROFESSIONAL_PROMOTER") {
+            throw new UnauthorizedException("Access denied.");
+        }
+
+        try {
+            const { ticketTakerId } = body;
+
+            // Verificar se o usuário existe e é do tipo TICKETTAKER
+            const user = await this.prisma.user.findUnique({
+                where: { uid: ticketTakerId }
+            });
+
+            if (!user || user.type !== 'TICKETTAKER') {
+                throw new BadRequestException('Recepcionista não encontrado');
+            }
+
+            // Verificar se já está vinculado
+            const existingLink = await this.prisma.ticketTaker.findFirst({
+                where: {
+                    userTicketTakerUid: ticketTakerId,
+                    userOwnerUid: userId
+                }
+            });
+
+            if (existingLink) {
+                throw new BadRequestException('Este recepcionista já está vinculado à sua conta');
+            }
+
+            // Criar o vínculo
+            await this.prisma.ticketTaker.create({
+                data: {
+                    userOwnerUid: userId,
+                    userTicketTakerUid: ticketTakerId
+                }
+            });
+
+            return { 
+                message: 'Recepcionista vinculado com sucesso!'
+            };
+
+        } catch (error) {
+            console.error('Error linking ticket taker:', error);
+            throw new Error('Internal server error');
         }
     }
 }

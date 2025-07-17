@@ -1,5 +1,5 @@
 import { Type } from "class-transformer";
-import { ArrayMinSize, ValidateNested, IsArray, IsDate, IsNotEmpty, IsOptional, IsString, IsNumber, IsObject, IsDefined, IsNotEmptyObject, IsDateString, IsBoolean } from "class-validator";
+import { ValidateNested, IsArray, IsOptional, IsString, IsNumber, IsDateString, IsBoolean, IsNotEmpty } from "class-validator";
 import { ApiProperty } from "@nestjs/swagger";
 
 class Coord {
@@ -18,16 +18,6 @@ class Ticket {
     @IsString()
     category: string;
 
-    @ApiProperty({ description: 'Nome do ingresso' })
-    @IsNotEmpty()
-    @IsString()
-    name: string;
-
-    @ApiProperty({ description: 'Descrição do ingresso' })
-    @IsOptional()
-    @IsString()
-    description?: string;
-
     @ApiProperty({ description: 'Preço do ingresso' })
     @IsNotEmpty()
     @Type(() => Number)
@@ -39,27 +29,32 @@ class Ticket {
     @Type(() => Number)
     @IsNumber()
     quantity: number;
-
-    @ApiProperty({ description: 'Se o ingresso está ativo' })
-    @IsOptional()
-    @Type(() => Boolean)
-    @IsBoolean()
-    isActive?: boolean;
 }
 
-export class CreateEventBody {
+class ImageData {
+    @ApiProperty({ description: 'Nome do arquivo' })
+    @IsString()
+    name: string;
+
+    @ApiProperty({ description: 'Tipo MIME do arquivo' })
+    @IsString()
+    type: string;
+
+    @ApiProperty({ description: 'Dados da imagem em base64' })
+    @IsString()
+    data: string;
+}
+
+export class CreateEventWithImagesBody {
     @ApiProperty({ description: 'Nome do evento' })
-    @IsNotEmpty()
     @IsString()
     name: string;
 
     @ApiProperty({ description: 'Descrição do evento' })
-    @IsNotEmpty()
     @IsString()
     description: string;
 
     @ApiProperty({ description: 'Data e hora de início do evento (ISO string)' })
-    @IsNotEmpty()
     @IsDateString()
     dateTimestamp: string;
 
@@ -90,15 +85,16 @@ export class CreateEventBody {
     @Type(() => Coord)
     coordinates_event?: Coord;
 
-    @ApiProperty({ description: 'Fotos do evento', type: [String], required: false })
+    @ApiProperty({ description: 'Imagens do evento em base64', type: [ImageData], required: false })
     @IsOptional()
     @IsArray()
-    @IsString({ each: true })
-    photos?: string[];
+    @ValidateNested({ each: true })
+    @Type(() => ImageData)
+    images?: ImageData[];
 
     @ApiProperty({ description: 'Ingressos do evento', type: [Ticket], required: false })
     @IsOptional()
     @ValidateNested({ each: true })
     @Type(() => Ticket)
     tickets?: Ticket[];
-}
+} 

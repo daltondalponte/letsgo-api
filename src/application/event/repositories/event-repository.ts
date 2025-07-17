@@ -12,4 +12,6 @@ export abstract class EventRepository {
     abstract findPendingApprovals(establishmentId: string): Promise<any[]>;
     abstract approveEvent(eventId: string, useruid: string): Promise<void>;
     abstract rejectEvent(eventId: string, useruid: string): Promise<void>;
+    abstract delete(id: string): Promise<void>;
+    abstract hasTicketSales(eventId: string): Promise<boolean>;
 }

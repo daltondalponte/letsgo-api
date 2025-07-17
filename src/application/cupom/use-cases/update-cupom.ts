@@ -10,6 +10,7 @@ interface CupomRequest {
     quantity_available: number;
     description?: string;
     eventId?: string;
+    expiresAt?: string;
 }
 
 @Injectable()
@@ -20,7 +21,7 @@ export class UpdateCupom {
     ) { }
 
     async execute(request: CupomRequest): Promise<void> {
-        const { id, code, descont_percent, discount_value, quantity_available, description, eventId } = request
+        const { id, code, descont_percent, discount_value, quantity_available, description, eventId, expiresAt } = request
 
         // DEBUG: Log dos valores recebidos
         console.log('=== DEBUG UPDATE CUPOM USE CASE ===');
@@ -28,6 +29,7 @@ export class UpdateCupom {
         console.log('descont_percent recebido:', descont_percent, 'tipo:', typeof descont_percent);
         console.log('discount_value recebido:', discount_value, 'tipo:', typeof discount_value);
         console.log('eventId recebido:', eventId, 'tipo:', typeof eventId);
+        console.log('expiresAt recebido:', expiresAt, 'tipo:', typeof expiresAt);
 
         const cupom = await this.cupomRepository.findById(id)
 
@@ -48,7 +50,7 @@ export class UpdateCupom {
             updatedAt: new Date(),
             eventId: eventId !== undefined ? eventId : cupom.eventId,
             createdAt: cupom.createdAt,
-            expiresAt: cupom.expiresAt,
+            expiresAt: expiresAt !== undefined ? new Date(expiresAt) : cupom.expiresAt,
             useruid: cupom.useruid,
             description: description ?? cupom.description
         }, cupom.id)

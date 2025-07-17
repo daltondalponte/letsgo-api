@@ -1,43 +1,36 @@
-import { randomUUID } from "crypto";
-import { Replace } from "@helpers/Replace";
-
-export interface Coord  {
+export interface Coord {
     latitude: number;
-    longitude: number
+    longitude: number;
 }
 
-export interface EventProps {
+interface EventProps {
+    id?: string;
     name: string;
-    address?: string,
-    useruid?: string,
-    coordinates_event?: Coord,
-    establishmentId?: string,
-    dateTimestamp: string,
-    endTimestamp?: string,
-    description: string,
-    ticketTakers?: string[],
-    listNames?: string[],
-    photos: string[],
-    isActive: boolean,
-    createdAt: Date,
-    updatedAt: Date
+    dateTimestamp: Date;
+    endTimestamp?: Date;
+    description: string;
+    photos: string[];
+    listNames?: string[];
+    address?: string;
+    establishmentId?: string;
+    useruid?: string;
+    isActive: boolean;
+    coordinates_event?: Coord;
 }
 
 export class Event {
-    _id: string;
     private props: EventProps;
 
-    constructor(props: Replace<EventProps, { createdAt?: Date, updatedAt?: Date }>, id?: string) {
-        this._id = id ?? randomUUID()
-        this.props = {
-            ...props,
-            createdAt: props.createdAt ?? new Date(),
-            updatedAt: props.updatedAt ?? new Date()
-        }
+    constructor(props: EventProps) {
+        this.props = props;
     }
 
-    public get id(): string {
-        return this._id;
+    public get id(): string | undefined {
+        return this.props.id;
+    }
+
+    public set id(id: string) {
+        this.props.id = id;
     }
 
     public set name(name: string) {
@@ -47,36 +40,20 @@ export class Event {
     public get name(): string {
         return this.props.name;
     }
-    
-    public set address(address: string) {
-        this.props.address = address;
-    }
 
-    public get address(): string {
-        return this.props.address;
-    }
-
-    public set coord(coord: Coord) {
-        this.props.coordinates_event = coord;
-    }
-
-    public get coord(): Coord {
-        return this.props.coordinates_event;
-    }
-
-    public set dateTimestamp(dateTimestamp: string) {
+    public set dateTimestamp(dateTimestamp: Date) {
         this.props.dateTimestamp = dateTimestamp;
     }
 
-    public get dateTimestamp(): string {
+    public get dateTimestamp(): Date {
         return this.props.dateTimestamp;
     }
 
-    public set endTimestamp(endTimestamp: string) {
+    public set endTimestamp(endTimestamp: Date | undefined) {
         this.props.endTimestamp = endTimestamp;
     }
 
-    public get endTimestamp(): string {
+    public get endTimestamp(): Date | undefined {
         return this.props.endTimestamp;
     }
 
@@ -88,30 +65,6 @@ export class Event {
         return this.props.description;
     }
 
-    public set isActive(isActive: boolean) {
-        this.props.isActive = isActive;
-    }
-
-    public get isActive(): boolean {
-        return this.props.isActive;
-    }
-
-    public set useruid(useruid: string) {
-        this.props.useruid = useruid;
-    }
-
-    public get useruid(): string {
-        return this.props.useruid;
-    }
-
-    public set establishmentId(establishmentId: string) {
-        this.props.establishmentId = establishmentId;
-    }
-
-    public get establishmentId(): string {
-        return this.props.establishmentId;
-    }
-
     public set photos(photos: string[]) {
         this.props.photos = photos;
     }
@@ -120,28 +73,51 @@ export class Event {
         return this.props.photos;
     }
 
-    public set ticketTakers(ticketTakers: string[]) {
-        this.props.ticketTakers = ticketTakers;
-    }
-
-    public get ticketTakers(): string[] {
-        return this.props.ticketTakers;
-    }
-
-    public set listNames(listNames: string[]) {
+    public set listNames(listNames: string[] | undefined) {
         this.props.listNames = listNames;
     }
 
-    public get listNames(): string[] {
+    public get listNames(): string[] | undefined {
         return this.props.listNames;
     }
 
-    public get createdAt(): Date {
-        return this.props.createdAt;
+    public set address(address: string | undefined) {
+        this.props.address = address;
     }
 
-    public get updatedAt(): Date {
-        return this.props.updatedAt;
+    public get address(): string | undefined {
+        return this.props.address;
     }
 
+    public set establishmentId(establishmentId: string | undefined) {
+        this.props.establishmentId = establishmentId;
+    }
+
+    public get establishmentId(): string | undefined {
+        return this.props.establishmentId;
+    }
+
+    public set useruid(useruid: string | undefined) {
+        this.props.useruid = useruid;
+    }
+
+    public get useruid(): string | undefined {
+        return this.props.useruid;
+    }
+
+    public set isActive(isActive: boolean) {
+        this.props.isActive = isActive;
+    }
+
+    public get isActive(): boolean {
+        return this.props.isActive;
+    }
+
+    public set coordinates_event(coordinates_event: Coord | undefined) {
+        this.props.coordinates_event = coordinates_event;
+    }
+
+    public get coordinates_event(): Coord | undefined {
+        return this.props.coordinates_event;
+    }
 }

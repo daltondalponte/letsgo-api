@@ -30,4 +30,9 @@ export class UpdateBody {
     @ApiProperty()
     description?: string;
 
+    @ApiProperty()
+    @IsOptional()
+    @IsString()
+    expiresAt?: string;
+
 } 

@@ -8,10 +8,6 @@ interface EventManagerRequest {
     id: string
 }
 
-interface EventManagerResponse {
-    eventManager: EventManager
-}
-
 @Injectable()
 export class UpdateEventManager {
 
@@ -19,7 +15,7 @@ export class UpdateEventManager {
         private eventManagerRepository: EventManagerRepository
     ) { }
 
-    async execute(request: EventManagerRequest): Promise<EventManagerResponse> {
+    async execute(request: EventManagerRequest): Promise<EventManager> {
 
         const { recursos, id } = request
 
@@ -36,6 +32,6 @@ export class UpdateEventManager {
 
         await this.eventManagerRepository.save(eventManagerEdited)
 
-        return { eventManager: eventManagerEdited }
+        return eventManagerEdited
     }
 }

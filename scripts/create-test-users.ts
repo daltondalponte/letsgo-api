@@ -153,7 +153,6 @@ async function createTestUsers() {
           'https://example.com/event1.jpg',
           'https://example.com/event2.jpg'
         ],
-        ticketTakers: [ticketTaker.email],
         listNames: ['Lista VIP', 'Lista Geral']
       }
     });

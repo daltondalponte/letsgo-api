@@ -7,7 +7,6 @@ interface EventManagerRequest {
     eventId: string;
 }
 
-
 @Injectable()
 export class FindEventManagerByEventId {
 
@@ -15,17 +14,12 @@ export class FindEventManagerByEventId {
         private eventManagerRepository: EventManagerRepository
     ) { }
 
-    async execute(request: EventManagerRequest): Promise<{ eventManager: EventManager, user: User }[]> {
+    async execute(request: EventManagerRequest): Promise<EventManager[]> {
 
         const { eventId } = request
 
-        const eventManagerData = await this.eventManagerRepository.findByEventId(eventId)
+        const eventManagers = await this.eventManagerRepository.findByEventId(eventId)
 
-        return eventManagerData.map(e => {
-            return {
-                eventManager: e.eventManager,
-                user: e.user
-            }
-        })
+        return eventManagers
     }
 }

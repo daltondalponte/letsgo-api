@@ -73,7 +73,7 @@ export class CupomController {
         console.log('body.eventId:', body.eventId);
         console.log('typeof body.eventId:', typeof body.eventId);
         
-        const { code, descont_percent, discount_value, quantity_available, description, eventId } = body
+        const { code, descont_percent, discount_value, quantity_available, description, eventId, expiresAt } = body
 
         await this.updateCupom.execute({
             id,
@@ -82,7 +82,8 @@ export class CupomController {
             discount_value,
             quantity_available,
             description,
-            eventId
+            eventId,
+            expiresAt
         })
 
         await this.createCupomAudit.execute({

@@ -98,7 +98,6 @@ model Event {
   useruid           String?
   coordinates_event Json?
   listNames         String[]
-  ticketTakers      String[]
   name              String
   isActive          Boolean              @default(false) @map("is_active")
   endTimestamp      DateTime?

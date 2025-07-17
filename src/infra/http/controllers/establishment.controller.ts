@@ -4,15 +4,15 @@ import { CreateEstablishment } from '@application/establishment/use-cases/create
 import { FindEstablishmentByUserUid } from '@application/establishment/use-cases/find-many-by-user';
 import { EstablishmentBody } from '../dtos/establishment/create-establishment-body';
 import { EstablishmentViewModel } from '../view-models/establishment/establishment-view-model';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { FindAllEstablishments } from '@application/establishment/use-cases/find-many';
 import { PhotoEstablishmentBody } from '../dtos/establishment/photos-establishment-body';
 import { UpdateEstablishmentPhoto } from '@application/establishment/use-cases/update-photos';
 import { UpdateEstablishment } from '@application/establishment/use-cases/update-establishment';
 import { EnsureProfessionalUser } from '../auth/guards/ensure-professional-user.guard';
 
-@ApiTags("Estabelecimento")
-@Controller("establishment")
+@ApiTags("Establishments")
+@Controller("establishments")
 export class EstablishmentController {
 
     constructor(
@@ -24,7 +24,12 @@ export class EstablishmentController {
     ) { }
 
     @UseGuards(JwtAuthGuard)
-    @Post("create")
+    @Post()
+    @ApiOperation({ summary: 'Create new establishment' })
+    @ApiBody({ type: EstablishmentBody })
+    @ApiResponse({ status: 201, description: 'Establishment created successfully' })
+    @ApiResponse({ status: 400, description: 'Invalid data' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
     async create(@Request() req, @Body() body: EstablishmentBody) {
         const { userId: useruid } = req.user
 
@@ -58,23 +63,11 @@ export class EstablishmentController {
     }
 
     @UseGuards(JwtAuthGuard)
-    @Put("update")
-    async update(@Query() id, @Request() req, @Body() body: PhotoEstablishmentBody) {
-        const { userId: useruid } = req.user
-
-        const { photos } = body
-
-        await this.updateEstablishmentPhoto.execute(
-            {
-                userOwnerUid: useruid,
-                photos,
-                id: id.id
-            }
-        )
-    }
-
-    @UseGuards(JwtAuthGuard)
-    @Put("admin/update/:id")
+    @Put("admin/:id")
+    @ApiOperation({ summary: 'Update establishment by admin' })
+    @ApiResponse({ status: 200, description: 'Establishment updated successfully' })
+    @ApiResponse({ status: 400, description: 'Invalid data' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
     async updateByAdmin(@Param("id") id: string, @Request() req, @Body() body: { name?: string; address?: string; coordinates?: any; description?: string; contactPhone?: string; website?: string; socialMedia?: any }) {
         const { userId: useruid, type } = req.user;
         
@@ -130,21 +123,14 @@ export class EstablishmentController {
         });
 
         console.log('✅ Estabelecimento atualizado com sucesso');
-        return { message: 'Estabelecimento atualizado com sucesso' };
+        return { message: 'Establishment updated successfully' };
     }
 
     @UseGuards(JwtAuthGuard)
-    @Get("find-by-user")
-    async findEventsByUserUidOrEstablishmentId(@Request() req, @Body() body) {
-        const { userId: useruid } = req.user
-
-        const { establishment } = await this.findManyByUser.execute({ useruid })
-
-        return { establishment: EstablishmentViewModel.toHTTP(establishment) }
-    }
-
-    @UseGuards(JwtAuthGuard)
-    @Get("/")
+    @Get()
+    @ApiOperation({ summary: 'Get all establishments' })
+    @ApiResponse({ status: 200, description: 'Establishments retrieved successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
     async findAll(@Request() req, @Body() body) {
 
         const { establishments } = await this.findAllEstablishments.execute()
@@ -153,6 +139,8 @@ export class EstablishmentController {
     }
 
     @Get("map")
+    @ApiOperation({ summary: 'Get establishments for map display' })
+    @ApiResponse({ status: 200, description: 'Establishments for map retrieved successfully' })
     async findForMap() {
         console.log('🔍 Buscando estabelecimentos para o mapa...');
         
@@ -189,6 +177,9 @@ export class EstablishmentController {
 
     @UseGuards(JwtAuthGuard)
     @Get("available-for-promoters")
+    @ApiOperation({ summary: 'Get establishments available for promoters' })
+    @ApiResponse({ status: 200, description: 'Available establishments retrieved successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
     async findAvailableForPromoters(@Request() req) {
         const { type } = req.user;
         
@@ -211,6 +202,9 @@ export class EstablishmentController {
 
     @UseGuards(JwtAuthGuard)
     @Get("search-for-promoters")
+    @ApiOperation({ summary: 'Search establishments for promoters' })
+    @ApiResponse({ status: 200, description: 'Search results retrieved successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
     async searchEstablishmentsForPromoters(@Request() req, @Query('query') query: string) {
         const { type } = req.user;
         

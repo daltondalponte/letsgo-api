@@ -5,11 +5,17 @@ import { AppModule } from './app.module';
 import basicAuth from 'express-basic-auth'
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
+import * as express from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
-    rawBody: true
+    rawBody: true,
+    bodyParser: true
   });
+
+  // Configurar limite de tamanho da requisição
+  app.use(express.json({ limit: '10mb' }));
+  app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
   app.use(['/docs', '/docs-json'], basicAuth({
     challenge: true,

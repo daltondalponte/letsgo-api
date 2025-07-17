@@ -12,7 +12,6 @@ interface EventRequest {
     dateTimestamp: string;
     endTimestamp?: string;
     description: string;
-    ticketTakers?: string[]
     listNames?: string[]
     photos: string[]
     isActive: boolean
@@ -37,16 +36,15 @@ export class CreateEvent {
 
     async execute(request: EventRequest): Promise<EventResponse> {
 
-        const { dateTimestamp, endTimestamp, description, photos, address, establishmentId, useruid, coordinates_event, listNames, ticketTakers, name, isActive, tickets } = request
+        const { dateTimestamp, endTimestamp, description, photos, address, establishmentId, useruid, coordinates_event, listNames, name, isActive, tickets } = request
 
         const event = new Event({
             name,
-            dateTimestamp,
-            endTimestamp,
+            dateTimestamp: new Date(dateTimestamp),
+            endTimestamp: endTimestamp ? new Date(endTimestamp) : undefined,
             description,
             photos,
             listNames,
-            ticketTakers,
             address,
             establishmentId,
             useruid,

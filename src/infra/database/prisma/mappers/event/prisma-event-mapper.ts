@@ -1,44 +1,37 @@
+import { Event as PrismaEvent } from "@prisma/client";
 import { Event } from "@application/event/entity/Event";
-import { Event as RawEvent } from "@prisma/client";
-
 
 export class PrismaEventMapper {
     static toPrisma(event: Event) {
         return {
-            id: event.id,
             name: event.name,
-            useruid: event.useruid,
-            coordinates_event: event.coord ? JSON.stringify(event.coord) : null,
-            address: event.address || null,
-            listNames: event.listNames || [],
-            ticketTakers: event.ticketTakers || [],
             dateTimestamp: event.dateTimestamp,
-            endTimestamp: event.endTimestamp || null,
+            endTimestamp: event.endTimestamp,
             description: event.description,
-            establishmentId: event.establishmentId || null,
-            photos: event.photos || [],
+            photos: event.photos,
+            listNames: event.listNames || [],
+            address: event.address || null,
             isActive: event.isActive,
-            createdAt: event.createdAt,
-            updatedAt: event.updatedAt
-        }
+            coordinates_event: event.coordinates_event,
+            ...(event.establishmentId && { establishment: { connect: { id: event.establishmentId } } }),
+            ...(event.useruid && { user: { connect: { uid: event.useruid } } })
+        };
     }
 
-    static toDomain(rawEvent: RawEvent) {
+    static toDomain(rawEvent: PrismaEvent): Event {
         return new Event({
+            id: rawEvent.id,
             name: rawEvent.name,
-            dateTimestamp: rawEvent.dateTimestamp.toISOString(),
-            endTimestamp: rawEvent.endTimestamp ? rawEvent.endTimestamp.toISOString() : undefined,
-            coordinates_event: rawEvent.coordinates_event ? JSON.parse(rawEvent.coordinates_event as string) : undefined,
-            listNames: rawEvent.listNames || undefined,
-            ticketTakers: rawEvent.ticketTakers || undefined,
+            dateTimestamp: rawEvent.dateTimestamp,
+            endTimestamp: rawEvent.endTimestamp,
             description: rawEvent.description,
-            photos: rawEvent.photos || [],
-            address: rawEvent.address || undefined,
-            establishmentId: rawEvent.establishmentId || undefined,
+            photos: rawEvent.photos,
+            listNames: rawEvent.listNames || undefined,
+            address: rawEvent.address,
+            establishmentId: rawEvent.establishmentId,
             useruid: rawEvent.useruid,
             isActive: rawEvent.isActive,
-            createdAt: rawEvent.createdAt,
-            updatedAt: rawEvent.updatedAt
-        }, rawEvent.id)
+            coordinates_event: rawEvent.coordinates_event as any,
+        });
     }
 }

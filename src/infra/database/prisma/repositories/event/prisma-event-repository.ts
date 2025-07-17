@@ -28,14 +28,21 @@ export class PrismaEventRepository implements EventRepository {
 
     async create(event: Event, tickets?: Array<{category: string; price: number; quantity: number}>): Promise<void> {
         const rawEvent = PrismaEventMapper.toPrisma(event)
-        // Remover campos que não devem ser passados diretamente
-        const { useruid, ...eventData } = rawEvent;
         
         try {
             const createdEvent = await this.prisma.event.create({
                 data: {
-                    ...eventData,
-                    useruid: useruid
+                    name: rawEvent.name,
+                    dateTimestamp: rawEvent.dateTimestamp,
+                    endTimestamp: rawEvent.endTimestamp,
+                    description: rawEvent.description,
+                    photos: rawEvent.photos,
+                    listNames: rawEvent.listNames,
+                    address: rawEvent.address,
+                    isActive: rawEvent.isActive,
+                    coordinates_event: rawEvent.coordinates_event as any,
+                    ...(event.establishmentId && { establishment: { connect: { id: event.establishmentId } } }),
+                    ...(event.useruid && { user: { connect: { uid: event.useruid } } })
                 }
             })
 
@@ -64,8 +71,8 @@ export class PrismaEventRepository implements EventRepository {
                     try {
                         const existingEvent = await this.prisma.event.findFirst({
                             where: {
-                                establishmentId: eventData.establishmentId,
-                                dateTimestamp: new Date(eventData.dateTimestamp)
+                                establishmentId: event.establishmentId,
+                                dateTimestamp: event.dateTimestamp
                             },
                             include: {
                                 establishment: true
@@ -146,17 +153,18 @@ export class PrismaEventRepository implements EventRepository {
             let whereClause: any = {};
 
             if (useruid) {
-                // Para promoters, filtrar apenas eventos futuros
-                whereClause.AND = [
-                    {
-                        dateTimestamp: {
-                            gte: new Date()
-                        }
-                    }
-                ];
+                // Para promoters, filtrar apenas eventos criados por eles
                 whereClause.useruid = useruid;
+                
+                // Adicionar filtro de data futura para promoters
+                if (!whereClause.AND) whereClause.AND = [];
+                whereClause.AND.push({
+                    dateTimestamp: {
+                        gte: new Date()
+                    }
+                });
             } else if (establishmentId) {
-                // Para owners, mostrar todos os eventos do estabelecimento (passados e futuros)
+                // Para owners, mostrar apenas eventos do seu estabelecimento
                 whereClause.establishmentId = establishmentId;
             }
 
@@ -378,16 +386,24 @@ export class PrismaEventRepository implements EventRepository {
     }
 
     async save(event: Event): Promise<void> {
-        const rawEvent = PrismaEventMapper.toPrisma(event)
-        delete rawEvent.id
-
         await this.prisma.event.update({
             where: {
-                id: event.id
+                id: event.id!
             },
-            data: rawEvent
+            data: {
+                name: event.name,
+                dateTimestamp: event.dateTimestamp,
+                endTimestamp: event.endTimestamp,
+                description: event.description,
+                photos: event.photos,
+                listNames: event.listNames || [],
+                address: event.address || null,
+                isActive: event.isActive,
+                coordinates_event: event.coordinates_event as any,
+                ...(event.establishmentId && { establishment: { connect: { id: event.establishmentId } } }),
+                ...(event.useruid && { user: { connect: { uid: event.useruid } } })
+            }
         })
-
     }
 
     async findPendingApprovals(establishmentId: string): Promise<any[]> {
@@ -486,5 +502,47 @@ export class PrismaEventRepository implements EventRepository {
                 isActive: false
             }
         });
+    }
+
+    async delete(id: string): Promise<void> {
+        // Primeiro, deletar todos os tickets do evento
+        await this.prisma.ticket.deleteMany({
+            where: {
+                eventId: id
+            }
+        });
+
+        // Deletar todas as aprovações do evento
+        await this.prisma.eventApprovals.deleteMany({
+            where: {
+                eventId: id
+            }
+        });
+
+        // Deletar todos os event managers do evento
+        await this.prisma.eventsReceptionist.deleteMany({
+            where: {
+                eventId: id
+            }
+        });
+
+        // Finalmente, deletar o evento
+        await this.prisma.event.delete({
+            where: {
+                id
+            }
+        });
+    }
+
+    async hasTicketSales(eventId: string): Promise<boolean> {
+        const ticketSales = await this.prisma.ticketSale.findFirst({
+            where: {
+                ticket: {
+                    eventId
+                }
+            }
+        });
+
+        return !!ticketSales;
     }
 }

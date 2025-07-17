@@ -1,27 +1,22 @@
 import { Type } from "class-transformer";
-import { ArrayMinSize, ValidateNested, IsArray, IsDate, IsNotEmpty, IsOptional, IsString, IsNumber, IsObject, IsDefined, IsNotEmptyObject, IsDateString, IsBoolean } from "class-validator";
+import { ValidateNested, IsArray, IsOptional, IsString, IsNumber, IsDateString, IsBoolean } from "class-validator";
 import { ApiProperty } from "@nestjs/swagger";
 
 class Coord {
     @ApiProperty({ description: 'Latitude da localização do evento' })
-    @IsNotEmpty()
-    latitude: number;
+    @IsOptional()
+    latitude?: number;
 
     @ApiProperty({ description: 'Longitude da localização do evento' })
-    @IsNotEmpty()
-    longitude: number;
+    @IsOptional()
+    longitude?: number;
 }
 
 class Ticket {
-    @ApiProperty({ description: 'Categoria do ingresso' })
-    @IsNotEmpty()
-    @IsString()
-    category: string;
-
     @ApiProperty({ description: 'Nome do ingresso' })
-    @IsNotEmpty()
+    @IsOptional()
     @IsString()
-    name: string;
+    name?: string;
 
     @ApiProperty({ description: 'Descrição do ingresso' })
     @IsOptional()
@@ -29,39 +24,36 @@ class Ticket {
     description?: string;
 
     @ApiProperty({ description: 'Preço do ingresso' })
-    @IsNotEmpty()
-    @Type(() => Number)
+    @IsOptional()
     @IsNumber()
-    price: number;
+    price?: number;
 
     @ApiProperty({ description: 'Quantidade disponível' })
-    @IsNotEmpty()
-    @Type(() => Number)
+    @IsOptional()
     @IsNumber()
-    quantity: number;
+    quantity?: number;
 
     @ApiProperty({ description: 'Se o ingresso está ativo' })
     @IsOptional()
-    @Type(() => Boolean)
     @IsBoolean()
     isActive?: boolean;
 }
 
-export class CreateEventBody {
-    @ApiProperty({ description: 'Nome do evento' })
-    @IsNotEmpty()
+export class UpdateEventBody {
+    @ApiProperty({ description: 'Nome do evento', required: false })
+    @IsOptional()
     @IsString()
-    name: string;
+    name?: string;
 
-    @ApiProperty({ description: 'Descrição do evento' })
-    @IsNotEmpty()
+    @ApiProperty({ description: 'Descrição do evento', required: false })
+    @IsOptional()
     @IsString()
-    description: string;
+    description?: string;
 
-    @ApiProperty({ description: 'Data e hora de início do evento (ISO string)' })
-    @IsNotEmpty()
+    @ApiProperty({ description: 'Data e hora de início do evento (ISO string)', required: false })
+    @IsOptional()
     @IsDateString()
-    dateTimestamp: string;
+    dateTimestamp?: string;
 
     @ApiProperty({ description: 'Data e hora de término do evento (ISO string)', required: false })
     @IsOptional()
@@ -70,14 +62,8 @@ export class CreateEventBody {
 
     @ApiProperty({ description: 'Duração do evento em horas', required: false })
     @IsOptional()
-    @Type(() => Number)
     @IsNumber()
     duration?: number;
-
-    @ApiProperty({ description: 'ID do estabelecimento', required: false })
-    @IsOptional()
-    @IsString()
-    establishmentId?: string;
 
     @ApiProperty({ description: 'Endereço do evento', required: false })
     @IsOptional()
@@ -91,14 +77,25 @@ export class CreateEventBody {
     coordinates_event?: Coord;
 
     @ApiProperty({ description: 'Fotos do evento', type: [String], required: false })
-    @IsOptional()
     @IsArray()
     @IsString({ each: true })
+    @IsOptional()
     photos?: string[];
 
-    @ApiProperty({ description: 'Ingressos do evento', type: [Ticket], required: false })
+    @ApiProperty({ description: 'Se o evento está ativo', required: false })
     @IsOptional()
+    @IsBoolean()
+    isActive?: boolean;
+
+    @ApiProperty({ description: 'ID do estabelecimento', required: false })
+    @IsOptional()
+    @IsString()
+    establishmentId?: string;
+
+    @ApiProperty({ description: 'Ingressos do evento', type: [Ticket], required: false })
+    @IsArray()
     @ValidateNested({ each: true })
     @Type(() => Ticket)
+    @IsOptional()
     tickets?: Ticket[];
-}
+} 

@@ -6,10 +6,6 @@ interface EventManagerRequest {
     id: string;
 }
 
-interface EventManagerResponse {
-    eventManager: EventManager;
-}
-
 @Injectable()
 export class FindEventManagerById {
 
@@ -17,7 +13,7 @@ export class FindEventManagerById {
         private eventManagerRepository: EventManagerRepository
     ) { }
 
-    async execute(request: EventManagerRequest): Promise<EventManagerResponse> {
+    async execute(request: EventManagerRequest): Promise<EventManager> {
         const { id } = request;
 
         const eventManager = await this.eventManagerRepository.findById(id);
@@ -26,6 +22,6 @@ export class FindEventManagerById {
             throw new Error("Event Manager não encontrado");
         }
 
-        return { eventManager };
+        return eventManager;
     }
 } 

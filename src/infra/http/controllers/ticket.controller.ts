@@ -1,5 +1,5 @@
 import { Body, Controller, Post, Put, Delete, UseGuards, Request, Param, Get } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CanInsertTicketsGuard } from '../auth/guards/ticket/can-insert-tickets.guard';
 import { CanUpdateticketsGuard } from '../auth/guards/ticket/can-update-tickets.guard';
@@ -12,8 +12,8 @@ import { DeleteTicket } from '@application/ticket/use-cases/delete-ticket';
 import { FindTicketPurchase } from '@application/ticket/use-cases/find-ticket-purchase';
 import { TicketViewModel } from '../view-models/ticket/ticket-view-model';
 
-@ApiTags('Ticket')
-@Controller('ticket')
+@ApiTags('Tickets')
+@Controller('tickets')
 export class TicketController {
   constructor(
     private createTicket: CreateTicket,
@@ -23,7 +23,12 @@ export class TicketController {
   ) {}
 
   @UseGuards(JwtAuthGuard, CanInsertTicketsGuard)
-  @Post('create')
+  @Post()
+  @ApiOperation({ summary: 'Create new ticket' })
+  @ApiBody({ type: TicketBody })
+  @ApiResponse({ status: 201, description: 'Ticket created successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid data' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   async create(@Request() req, @Body() body: TicketBody) {
     const { userId: useruid } = req.user;
     const { description, price, eventId, quantity_available } = body;
@@ -40,10 +45,15 @@ export class TicketController {
   }
 
   @UseGuards(JwtAuthGuard, CanUpdateticketsGuard)
-  @Put('update')
-  async update(@Request() req, @Body() body: UpdateTicketBody) {
+  @Put(':id')
+  @ApiOperation({ summary: 'Update ticket' })
+  @ApiBody({ type: UpdateTicketBody })
+  @ApiResponse({ status: 200, description: 'Ticket updated successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid data' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async update(@Param('id') id: string, @Request() req, @Body() body: UpdateTicketBody) {
     const { userId: useruid } = req.user;
-    const { id, price, eventId, quantity_available } = body;
+    const { price, eventId, quantity_available } = body;
     
     const { ticket } = await this.updateTicket.execute({
       id,
@@ -57,18 +67,25 @@ export class TicketController {
   }
 
   @UseGuards(JwtAuthGuard, CanDeleteTicketsGuard)
-  @Delete('delete/:id')
+  @Delete(':id')
+  @ApiOperation({ summary: 'Delete ticket' })
+  @ApiResponse({ status: 200, description: 'Ticket deleted successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Ticket not found' })
   async delete(@Param('id') id: string, @Request() req) {
     const { userId: useruid } = req.user;
     await this.deleteTicket.execute({
       id,
       useruid,
     });
-    return { message: 'Ticket deletado com sucesso' };
+    return { message: 'Ticket deleted successfully' };
   }
 
   @UseGuards(JwtAuthGuard)
   @Get('user')
+  @ApiOperation({ summary: 'Get user tickets' })
+  @ApiResponse({ status: 200, description: 'User tickets retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getUserTickets(@Request() req) {
     const { userId } = req.user;
     const { tickets } = await this.findTicketPurchase.execute({ userId });

@@ -1,54 +1,52 @@
 import { Injectable } from "@nestjs/common";
-import { Coord, Event } from "../entity/Event";
+import { Event } from "../entity/Event";
 import { EventRepository } from "../repositories/event-repository";
 import { UnauthorizedException } from "@nestjs/common"
 
-interface EventRequest {
+interface UpdateEventRequest {
     id: string;
-    establishmentId: string;
     name?: string;
     description?: string;
     photos?: string[];
-    isActive?: boolean
+    isActive?: boolean;
+    establishmentId?: string;
 }
 
-interface EventResponse {
-    event: Event
+interface UpdateEventResponse {
+    event: Event;
 }
 
 @Injectable()
 export class UpdateEvent {
+    constructor(private eventRepository: EventRepository) { }
 
-    constructor(
-        private eventRepository: EventRepository
-    ) { }
+    async execute(request: UpdateEventRequest): Promise<UpdateEventResponse> {
+        const { id, name, description, photos, isActive, establishmentId } = request;
 
-    async execute(request: EventRequest): Promise<EventResponse> {
-        const { description, photos, name, id, establishmentId, isActive } = request
+        const event = await this.eventRepository.findById(id);
 
-        const event = await this.eventRepository.findById(id)
-
-        if (event.establishmentId !== establishmentId) {
-            throw new UnauthorizedException("Acesso negado!")
+        if (name) {
+            event.name = name;
         }
 
-        const eventToEdit = new Event({
-            ticketTakers: event.ticketTakers,
-            dateTimestamp: event.dateTimestamp,
-            description: description ?? event.description,
-            name: name ?? event.name,
-            useruid: event.useruid,
-            coordinates_event: event.coord,
-            address: event.address,
-            listNames: event.listNames,
-            establishmentId: event.establishmentId,
-            photos: photos ?? event.photos,
-            isActive: isActive ?? event.isActive,
-            createdAt: event.createdAt
-        }, event.id)
+        if (description) {
+            event.description = description;
+        }
 
-        await this.eventRepository.save(eventToEdit)
+        if (photos) {
+            event.photos = photos;
+        }
 
-        return { event: eventToEdit }
+        if (isActive !== undefined) {
+            event.isActive = isActive;
+        }
+
+        if (establishmentId) {
+            event.establishmentId = establishmentId;
+        }
+
+        await this.eventRepository.save(event);
+
+        return { event };
     }
 }

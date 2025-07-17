@@ -4,10 +4,6 @@ import { EventManagerRepository } from "../repositories/event-manager-repository
 
 interface EventManagerRequest extends Omit<EventManagerProps, "createdAt" | "updatedAt"> { }
 
-interface EventManagerResponse {
-    eventManager: EventManager
-}
-
 @Injectable()
 export class CreateEventManager {
 
@@ -16,7 +12,7 @@ export class CreateEventManager {
 
     ) { }
 
-    async execute(request: EventManagerRequest): Promise<EventManagerResponse> {
+    async execute(request: EventManagerRequest): Promise<EventManager> {
 
         const { eventId, recursos, useruid } = request
 
@@ -28,6 +24,6 @@ export class CreateEventManager {
 
         await this.eventManagerRepository.create(eventManager)
 
-        return { eventManager }
+        return eventManager
     }
 }

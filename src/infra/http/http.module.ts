@@ -22,13 +22,13 @@ import { CreateTicketPurchase } from "@application/ticket/use-cases/create-ticke
 import { FindTicketPurchase } from "@application/ticket/use-cases/find-ticket-purchase";
 import { UpdateEvent } from "@application/event/use-cases/update-event";
 import { FindEventById } from "@application/event/use-cases/find-event-by-id";
+import { DeleteEvent } from "@application/event/use-cases/delete-event";
 import { UpdateTicket } from "@application/ticket/use-cases/update-ticket";
 import { UpdateUSer } from "@application/user/use-cases/update-user";
 import { MailModule } from "@infra/email/nodemailer/mail.module";
 import { FindAllEstablishments } from "@application/establishment/use-cases/find-many";
 import { UpdateEstablishmentPhoto } from "@application/establishment/use-cases/update-photos";
 import { UpdateEventListNames } from "@application/event/use-cases/update-event-list-names";
-import { UpdateEventTakers } from "@application/event/use-cases/update-event-takers";
 import { FindTicketTakerByUserTakerId } from "@application/ticketTaker/use-cases/find-by-user-taker";
 import { FindTicketPurchasebyId } from "@application/ticket/use-cases/find-ticket-purchase-by-id";
 import { ConferredTicketPurchase } from "@application/ticket/use-cases/conferred-ticket-sale";
@@ -109,9 +109,9 @@ import { ImageController } from './controllers/image.controller';
         FindAllTickets,
         CreateEvent,
         UpdateEvent,
-        UpdateEventTakers,
         UpdateEventListNames,
         FindEventById,
+        DeleteEvent,
         FindEstablishmentByUserUid,
         FindEventsByUserUidOrEstablishmentId,
         CreateEstablishment,

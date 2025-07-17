@@ -14,17 +14,17 @@ class Coord {
 
 export class EstablishmentBody {
 
-    @ApiProperty()
+    @ApiProperty({ description: 'Nome do estabelecimento' })
     @IsNotEmpty()
     @IsString()
     name: string;
 
-    @ApiProperty()
+    @ApiProperty({ description: 'Endereço do estabelecimento' })
     @IsNotEmpty()
     @IsString()
     address: string;
 
-    @ApiProperty()
+    @ApiProperty({ description: 'Coordenadas geográficas do estabelecimento' })
     @IsDefined()
     @IsNotEmptyObject()
     @IsObject()
@@ -32,28 +32,28 @@ export class EstablishmentBody {
     @Type(() => Coord)
     coordinates: Coord;
 
-    @ApiProperty()  
+    @ApiProperty({ description: 'Fotos do estabelecimento', type: [String], required: false })  
+    @IsOptional()
     @IsArray()
     @IsString({ each: true })
-    @ArrayMinSize(1)
-    photos: string[]
+    photos?: string[]
 
-    @ApiProperty()
+    @ApiProperty({ description: 'Descrição do estabelecimento', required: false })
     @IsOptional()
     @IsString()
-    description: string;
+    description?: string;
 
-    @ApiProperty()
+    @ApiProperty({ description: 'Telefone de contato', required: false })
     @IsOptional()
     @IsString()
-    contactPhone: string;
+    contactPhone?: string;
 
-    @ApiProperty()
+    @ApiProperty({ description: 'Website do estabelecimento', required: false })
     @IsOptional()
     @IsString()
-    website: string;
+    website?: string;
 
-    @ApiProperty()
+    @ApiProperty({ description: 'Redes sociais do estabelecimento', required: false })
     @IsOptional()
-    socialMedia: any;
+    socialMedia?: any;
 }

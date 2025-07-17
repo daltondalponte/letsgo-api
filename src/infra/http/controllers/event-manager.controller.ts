@@ -1,6 +1,6 @@
 import { Controller, Body, UseGuards, Post, Get, Request, Put, Param, Delete, BadRequestException, HttpException, HttpStatus } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { CreateEventManager } from '@application/event-manager/use-cases/create-event-manager';
 import { FindEventManagerByEventId } from '@application/event-manager/use-cases/find-event-manager-by-eventid';
 import { FindEventManagerById } from '@application/event-manager/use-cases/find-event-manager-by-id';
@@ -15,8 +15,8 @@ import { User } from '@application/user/entity/User';
 import { FindUserById } from '@application/user/use-cases/find-user-by-id';
 import { PrismaService } from '@infra/database/prisma/prisma.service';
 
-@ApiTags("Event Manager")
-@Controller("event-manager")
+@ApiTags("Event Managers")
+@Controller("event-managers")
 export class EventManagerController {
 
     constructor(
@@ -32,7 +32,26 @@ export class EventManagerController {
     ) { }
 
     @UseGuards(JwtAuthGuard, EnsureProfessionalUser)
-    @Post("create")
+    @Post()
+    @ApiOperation({ summary: 'Create event manager (link receptionist to event)' })
+    @ApiBody({ 
+        schema: {
+            type: 'object',
+            properties: {
+                userUid: { type: 'string' },
+                eventId: { type: 'string' },
+                recursos: { 
+                    type: 'array', 
+                    items: { type: 'string' },
+                    default: ['TICKETINSERT', 'TICKETUPDATE', 'TICKETDELETE']
+                }
+            },
+            required: ['userUid', 'eventId']
+        }
+    })
+    @ApiResponse({ status: 201, description: 'Event manager created successfully' })
+    @ApiResponse({ status: 400, description: 'Invalid data' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
     async create(@Request() req, @Body() body: any) {
         try {
             const { userId: useruid } = req.user;
@@ -45,7 +64,7 @@ export class EventManagerController {
             });
 
             if (!event) {
-                throw new BadRequestException('Evento não encontrado');
+                throw new BadRequestException('Event not found');
             }
 
             // Verificar se o usuário que está tentando vincular é owner do estabelecimento
@@ -57,7 +76,7 @@ export class EventManagerController {
                 if (establishment && establishment.userOwnerUid === useruid) {
                     // Se é owner do estabelecimento, verificar se o evento é de um promoter
                     if (event.user.type === 'PROFESSIONAL_PROMOTER') {
-                        throw new BadRequestException('Owners não podem vincular recepcionistas a eventos de promoters. Apenas o promoter pode gerenciar seus próprios eventos.');
+                        throw new BadRequestException('Owners cannot link receptionists to promoter events. Only the promoter can manage their own events.');
                     }
                 }
             }
@@ -65,14 +84,14 @@ export class EventManagerController {
             // Buscar o usuário pelo userUid (uid) para validar o tipo
             const { user } = await this.findUserById.execute({ id: userUid });
             if (!user) {
-                throw new BadRequestException('Usuário não encontrado');
+                throw new BadRequestException('User not found');
             }
             if (user.type !== 'TICKETTAKER') {
-                throw new BadRequestException('Apenas usuários do tipo RECEPCIONISTA podem ser vinculados como validadores de ingressos.');
+                throw new BadRequestException('Only TICKETTAKER users can be linked as ticket validators.');
             }
 
             // Usar o userUid diretamente para vincular o recepcionista ao evento
-            const { eventManager } = await this.createEventManager.execute({
+            const eventManager = await this.createEventManager.execute({
                 eventId,
                 recursos: recursos || ['TICKETINSERT', 'TICKETUPDATE', 'TICKETDELETE'],
                 useruid: userUid
@@ -80,7 +99,7 @@ export class EventManagerController {
 
             return { 
                 eventManager: EventManagerViewModel.toHTTP(eventManager),
-                message: "Recepcionista vinculado com sucesso"
+                message: "Receptionist linked successfully"
             };
         } catch (error) {
             if (error instanceof BadRequestException) {
@@ -93,49 +112,74 @@ export class EventManagerController {
             
             // Para outros erros, retornar erro genérico
             throw new HttpException(
-                'Erro interno do servidor ao vincular recepcionista',
+                'Internal server error while linking receptionist',
                 HttpStatus.INTERNAL_SERVER_ERROR
             );
         }
     }
 
     @UseGuards(JwtAuthGuard)
-    @Get("find-by-event/:eventId")
-    async findByEventId(@Param("eventId") eventId: string, @Request() req) {
+    @Get()
+    @ApiOperation({ summary: 'Get event managers by event ID' })
+    @ApiResponse({ status: 200, description: 'Event managers retrieved successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    async findByEventId(@Request() req, @Param() params: any) {
+        const { eventId } = req.query;
+        
+        if (!eventId) {
+            throw new BadRequestException('Event ID is required');
+        }
+
         const managers = await this.findEventManagerByEventId.execute({ eventId });
 
+        // Buscar informações dos usuários separadamente
+        const managersWithUsers = await Promise.all(
+            managers.map(async (manager) => {
+                const userResponse = await this.findUserById.execute({ id: manager.useruid });
+                return {
+                    ...EventManagerViewModel.toHTTP(manager),
+                    user: {
+                        id: manager.useruid,
+                        name: userResponse?.user?.name || '',
+                        email: userResponse?.user?.email || ''
+                    }
+                };
+            })
+        );
+
         return {
-            managers: managers.map(m => ({
-                ...EventManagerViewModel.toHTTP(m.eventManager),
-                user: {
-                    id: m.user.id,
-                    name: m.user.name,
-                    email: m.user.email
-                }
-            }))
+            managers: managersWithUsers
         };
     }
 
     @UseGuards(JwtAuthGuard, EnsureProfessionalUser)
-    @Delete("delete/:id")
+    @Delete(':id')
+    @ApiOperation({ summary: 'Delete event manager (unlink receptionist from event)' })
+    @ApiResponse({ status: 200, description: 'Event manager deleted successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 404, description: 'Event manager not found' })
     async delete(@Param("id") id: string, @Request() req) {
         // Buscar o event manager para obter eventId e useruid
-        const { eventManager } = await this.findEventManagerById.execute({ id });
+        const eventManager = await this.findEventManagerById.execute({ id });
         
         await this.deleteEventManager.execute({
             eventId: eventManager.eventId,
             useruid: eventManager.useruid
         });
 
-        return { message: "Administrador removido com sucesso" };
+        return { message: "Event manager removed successfully" };
     }
 
     @UseGuards(JwtAuthGuard, EnsureProfessionalUser)
-    @Put("update/:id")
+    @Put(':id')
+    @ApiOperation({ summary: 'Update event manager resources' })
+    @ApiResponse({ status: 200, description: 'Event manager updated successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 404, description: 'Event manager not found' })
     async update(@Param("id") id: string, @Request() req, @Body() body: any) {
         const { recursos } = body;
 
-        const { eventManager } = await this.updateEventManager.execute({
+        const eventManager = await this.updateEventManager.execute({
             id,
             recursos
         });
@@ -144,7 +188,10 @@ export class EventManagerController {
     }
 
     @UseGuards(JwtAuthGuard, EnsureProfessionalUser)
-    @Put("update-resources/:eventId")
+    @Put('event/:eventId/resources')
+    @ApiOperation({ summary: 'Update resources for all event managers of an event' })
+    @ApiResponse({ status: 200, description: 'Resources updated successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
     async updateResourcesForEvent(@Param("eventId") eventId: string, @Request() req) {
         try {
             // Buscar todos os event managers para este evento
@@ -153,7 +200,7 @@ export class EventManagerController {
             // Atualizar recursos para todos os recepcionistas do evento
             const updatePromises = managers.map(manager => 
                 this.updateEventManager.execute({
-                    id: manager.eventManager.id,
+                    id: manager.id,
                     recursos: ['TICKETINSERT', 'TICKETUPDATE', 'TICKETDELETE']
                 })
             );
@@ -161,12 +208,12 @@ export class EventManagerController {
             await Promise.all(updatePromises);
             
             return { 
-                message: "Recursos atualizados com sucesso para todos os recepcionistas do evento",
+                message: "Resources updated successfully for all event receptionists",
                 updatedCount: managers.length
             };
         } catch (error) {
             throw new HttpException(
-                'Erro ao atualizar recursos dos recepcionistas',
+                'Error updating receptionist resources',
                 HttpStatus.INTERNAL_SERVER_ERROR
             );
         }
