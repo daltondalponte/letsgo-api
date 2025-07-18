@@ -11,7 +11,7 @@ export class CupomViewModel {
             expiresAt: cupom.expiresAt,
             quantityAvailable: cupom.quantityAvailable,
             descontPercent: Number(cupom.descontPercent),
-            discontValue: Number(cupom.discountValue),
+            discount_value: Number(cupom.discountValue),
             createdAt: cupom?.createdAt,
             updatedAt: cupom?.updatedAt,
             useruid: cupom.useruid,

@@ -47,9 +47,56 @@ export class UserController {
     ) { }
 
     @Post()
-    @ApiOperation({ summary: 'Create new user' })
-    @ApiBody({ type: UserBody })
-    @ApiResponse({ status: 201, description: 'User created successfully' })
+    @ApiOperation({ 
+        summary: 'Create new user',
+        description: 'Creates a new user account with the provided information. Supports different user types: PERSONAL, PROFESSIONAL_OWNER, PROFESSIONAL_PROMOTER, TICKETTAKER'
+    })
+    @ApiBody({ 
+        type: UserBody,
+        description: 'User registration data',
+        examples: {
+            personal: {
+                summary: 'Personal User',
+                value: {
+                    name: 'João Silva',
+                    email: 'joao@email.com',
+                    password: 'senha123',
+                    type: 'PERSONAL',
+                    phone: '11999999999'
+                }
+            },
+            professional: {
+                summary: 'Professional User',
+                value: {
+                    name: 'Maria Santos',
+                    email: 'maria@estabelecimento.com',
+                    password: 'senha123',
+                    type: 'PROFESSIONAL_OWNER',
+                    isOwnerOfEstablishment: true,
+                    phone: '11988888888'
+                }
+            }
+        }
+    })
+    @ApiResponse({ 
+        status: 201, 
+        description: 'User created successfully',
+        schema: {
+            type: 'object',
+            properties: {
+                user: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'string' },
+                        name: { type: 'string' },
+                        email: { type: 'string' },
+                        type: { type: 'string' },
+                        createdAt: { type: 'string', format: 'date-time' }
+                    }
+                }
+            }
+        }
+    })
     @ApiResponse({ status: 400, description: 'Invalid data or email already registered' })
     async create(@Body() body: UserBody) {
         const { email, name, password, address, avatar, document, type, isOwnerOfEstablishment, phone, birthDate } = body

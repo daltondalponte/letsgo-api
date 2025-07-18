@@ -142,7 +142,7 @@ export class PermissionsService {
     }
 
     async canInsertCupons(eventId: string | null, userId: string): Promise<boolean> {
-        // Se eventId for null, permitir criação de cupons para todos os eventos do usuário
+        // Se eventId for null, permitir criação de cupons globais para usuários que têm eventos
         if (!eventId) {
             // Verificar se o usuário tem pelo menos um evento criado por ele
             const userEvents = await this.prisma.event.findFirst({
@@ -160,21 +160,25 @@ export class PermissionsService {
             return false;
         }
 
-        // Se o usuário é o dono do evento, permitir
+        // Para cupons específicos de eventos, apenas o criador do evento pode criar
         if (event.useruid === userId) {
             return true;
         }
 
-        // Se o usuário é o owner do estabelecimento, verificar se pode gerenciar
-        const establishment = await this.prisma.establishment.findUnique({
-            where: { id: event.establishmentId }
-        });
-        if (establishment && establishment.userOwnerUid === userId) {
-            // Owner não pode alterar cupons de eventos de promoters
-            if (event.user.type === 'PROFESSIONAL_PROMOTER') {
-                return false;
+        // Se o usuário é owner do estabelecimento, verificar se pode gerenciar
+        if (event.establishmentId) {
+            const establishment = await this.prisma.establishment.findUnique({
+                where: { id: event.establishmentId }
+            });
+            
+            if (establishment && establishment.userOwnerUid === userId) {
+                // Owner NÃO pode criar cupons para eventos de promoters
+                if (event.user.type === 'PROFESSIONAL_PROMOTER') {
+                    return false;
+                }
+                // Owner pode criar cupons apenas para eventos criados por ele mesmo
+                return event.useruid === userId;
             }
-            return true;
         }
 
         // Recepcionistas não podem alterar dados de eventos (só usam app mobile)
@@ -233,11 +237,9 @@ export class PermissionsService {
     }
 
     async canUpdateCupons(eventId: string, userId: string): Promise<boolean> {
-        // Se não há eventId, é um cupom global: permitir se o useruid for o criador
+        // Se não há eventId, é um cupom global: permitir apenas se o useruid for o criador
         if (!eventId) {
-            // Buscar o cupom pelo useruid
-            // Aqui, idealmente, deveríamos receber o id do cupom, mas como só temos userId, permitimos se o userId for igual ao useruid do cupom
-            // O guard deve ser ajustado para passar o id do cupom, mas para manter compatibilidade, buscamos todos os cupons globais do usuário
+            // Para cupons globais, apenas o criador pode editar
             const globalCupom = await this.prisma.cupom.findFirst({
                 where: {
                     eventId: null,
@@ -246,28 +248,38 @@ export class PermissionsService {
             });
             return !!globalCupom;
         }
+        
         const event = await this.prisma.event.findUnique({
             where: { id: eventId },
             include: { user: true }
         });
+        
         if (!event) {
             return false;
         }
-        // Se o usuário é o dono do evento, permitir
+        
+        // Para cupons específicos de eventos, apenas o criador do evento pode editar
+        // Owners NÃO podem editar cupons de eventos de Promoters
         if (event.useruid === userId) {
             return true;
         }
-        // Se o usuário é o owner do estabelecimento, verificar se pode gerenciar
-        const establishment = await this.prisma.establishment.findUnique({
-            where: { id: event.establishmentId }
-        });
-        if (establishment && establishment.userOwnerUid === userId) {
-            // Owner não pode alterar cupons de eventos de promoters
-            if (event.user.type === 'PROFESSIONAL_PROMOTER') {
-                return false;
+        
+        // Se o usuário é owner do estabelecimento, verificar se pode gerenciar
+        if (event.establishmentId) {
+            const establishment = await this.prisma.establishment.findUnique({
+                where: { id: event.establishmentId }
+            });
+            
+            if (establishment && establishment.userOwnerUid === userId) {
+                // Owner NÃO pode editar cupons de eventos de promoters
+                if (event.user.type === 'PROFESSIONAL_PROMOTER') {
+                    return false;
+                }
+                // Owner pode editar cupons apenas de eventos criados por ele mesmo
+                return event.useruid === userId;
             }
-            return true;
         }
+        
         // Recepcionistas não podem alterar dados de eventos (só usam app mobile)
         return false;
     }

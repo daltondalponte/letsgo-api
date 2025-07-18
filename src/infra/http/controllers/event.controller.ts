@@ -58,11 +58,46 @@ export class EventController {
 
     @UseGuards(JwtAuthGuard, EnsureProfessionalUser)
     @Post()
-    @ApiOperation({ summary: 'Create new event' })
-    @ApiBody({ type: CreateEventBody })
-    @ApiResponse({ status: 201, description: 'Event created successfully' })
-    @ApiResponse({ status: 400, description: 'Invalid data or time conflict' })
-    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiOperation({ 
+        summary: 'Criar novo evento',
+        description: 'Cria um novo evento no sistema. Owners criam eventos ativos automaticamente, Promoters criam eventos pendentes de aprovação.'
+    })
+    @ApiBody({ 
+        type: CreateEventBody,
+        description: 'Dados do evento a ser criado',
+        examples: {
+            eventoCompleto: {
+                summary: 'Evento completo com estabelecimento',
+                value: {
+                    name: 'Festa de Aniversário',
+                    description: 'Uma festa incrível para celebrar',
+                    dateTimestamp: '2024-12-25T20:00:00.000Z',
+                    duration: 4,
+                    establishmentId: 'uuid-do-estabelecimento',
+                    tickets: [
+                        {
+                            name: 'Ingresso Padrão',
+                            price: 50.00,
+                            quantity: 100,
+                            description: 'Acesso completo ao evento'
+                        }
+                    ]
+                }
+            }
+        }
+    })
+    @ApiResponse({ 
+        status: 201, 
+        description: 'Evento criado com sucesso',
+        schema: {
+            type: 'object',
+            properties: {
+                event: { type: 'object', description: 'Dados do evento criado' }
+            }
+        }
+    })
+    @ApiResponse({ status: 400, description: 'Dados inválidos ou conflito de horário' })
+    @ApiResponse({ status: 401, description: 'Não autorizado' })
     async create(@Request() req, @Body() body: CreateEventBody) {
         const { userId: useruid, type } = req.user
 
@@ -182,11 +217,53 @@ export class EventController {
 
     @UseGuards(JwtAuthGuard, EnsureProfessionalUser)
     @Post("with-images")
-    @ApiOperation({ summary: 'Create event with secure image upload' })
-    @ApiBody({ type: CreateEventWithImagesBody })
-    @ApiResponse({ status: 201, description: 'Event created successfully' })
-    @ApiResponse({ status: 400, description: 'Invalid data or time conflict' })
-    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiOperation({ 
+        summary: 'Criar evento com upload de imagens',
+        description: 'Cria um novo evento com upload seguro de imagens para Cloudflare R2. Suporta múltiplas imagens.'
+    })
+    @ApiBody({ 
+        type: CreateEventWithImagesBody,
+        description: 'Dados do evento com imagens em base64',
+        examples: {
+            eventoComImagens: {
+                summary: 'Evento com imagens',
+                value: {
+                    name: 'Festa de Aniversário',
+                    description: 'Uma festa incrível para celebrar',
+                    dateTimestamp: '2024-12-25T20:00:00.000Z',
+                    duration: 4,
+                    establishmentId: 'uuid-do-estabelecimento',
+                    images: [
+                        {
+                            data: 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQ...',
+                            filename: 'festa.jpg',
+                            contentType: 'image/jpeg'
+                        }
+                    ],
+                    tickets: [
+                        {
+                            name: 'Ingresso Padrão',
+                            price: 50.00,
+                            quantity: 100,
+                            description: 'Acesso completo ao evento'
+                        }
+                    ]
+                }
+            }
+        }
+    })
+    @ApiResponse({ 
+        status: 201, 
+        description: 'Evento criado com sucesso',
+        schema: {
+            type: 'object',
+            properties: {
+                event: { type: 'object', description: 'Dados do evento criado' }
+            }
+        }
+    })
+    @ApiResponse({ status: 400, description: 'Dados inválidos ou erro no upload de imagens' })
+    @ApiResponse({ status: 401, description: 'Não autorizado' })
     async createWithImages(@Request() req, @Body() body: CreateEventWithImagesBody) {
         const { userId: useruid, type } = req.user;
         const { images, ...eventData } = body;
@@ -344,8 +421,24 @@ export class EventController {
     }
 
     @Get("explore")
-    @ApiOperation({ summary: 'Get events for explore page' })
-    @ApiResponse({ status: 200, description: 'Events retrieved successfully' })
+    @ApiOperation({ 
+        summary: 'Buscar eventos para exploração',
+        description: 'Retorna eventos aprovados e ativos para serem exibidos no mapa de exploração do app mobile.'
+    })
+    @ApiResponse({ 
+        status: 200, 
+        description: 'Eventos encontrados com sucesso',
+        schema: {
+            type: 'object',
+            properties: {
+                events: { 
+                    type: 'array',
+                    items: { type: 'object' },
+                    description: 'Lista de eventos aprovados e ativos'
+                }
+            }
+        }
+    })
     async getExploreEvents() {
         try {
             // Buscar eventos ativos e futuros (sem filtro de aprovação)
@@ -434,7 +527,7 @@ export class EventController {
             
         } else if (type === 'PROFESSIONAL_OWNER') {
             
-            // Owners veem eventos do seu estabelecimento (criados por eles E por promoters)
+            // Owners veem todos os eventos dos seus estabelecimentos (aprovados, pendentes e os que criaram)
             const establishments = await this.prisma.establishment.findMany({
                 where: { userOwnerUid: useruid },
                 select: { id: true, name: true }
@@ -443,12 +536,21 @@ export class EventController {
             if (establishments.length > 0) {
                 const establishmentIds = establishments.map(e => e.id);
                 
-                // Buscar eventos dos estabelecimentos do owner
+                // Buscar todos os eventos dos estabelecimentos do owner (incluindo pendentes e aprovados)
                 const dbEvents = await this.prisma.event.findMany({
                     where: {
-                        establishmentId: {
-                            in: establishmentIds
-                        }
+                        OR: [
+                            // Eventos dos estabelecimentos do owner
+                            {
+                                establishmentId: {
+                                    in: establishmentIds
+                                }
+                            },
+                            // Eventos criados pelo próprio owner
+                            {
+                                useruid: useruid
+                            }
+                        ]
                     },
                     include: {
                         establishment: true,
@@ -468,7 +570,27 @@ export class EventController {
                 events = dbEvents;
                 
             } else {
-                events = [];
+                // Se não tem estabelecimentos, buscar apenas eventos criados pelo owner
+                const dbEvents = await this.prisma.event.findMany({
+                    where: {
+                        useruid: useruid
+                    },
+                    include: {
+                        establishment: true,
+                        user: true,
+                        ManageEvents: {
+                            include: {
+                                user: true
+                            }
+                        },
+                        Ticket: true
+                    },
+                    orderBy: {
+                        dateTimestamp: 'desc'
+                    }
+                });
+                
+                events = dbEvents;
             }
         } else if (type === 'PERSONAL') {
             events = [];
@@ -656,7 +778,7 @@ export class EventController {
             
         } else if (type === 'PROFESSIONAL_OWNER') {
             
-            // Owners veem eventos aprovados dos seus estabelecimentos
+            // Owners veem TODOS os eventos dos seus estabelecimentos (aprovados, pendentes, passados e os que criaram)
             const establishments = await this.prisma.establishment.findMany({
                 where: { userOwnerUid: useruid },
                 select: { id: true, name: true }
@@ -665,16 +787,21 @@ export class EventController {
             if (establishments.length > 0) {
                 const establishmentIds = establishments.map(e => e.id);
                 
-                // Buscar eventos aprovados dos estabelecimentos do owner
+                // Buscar TODOS os eventos dos estabelecimentos do owner (sem filtro de data)
                 const dbEvents = await this.prisma.event.findMany({
                     where: {
-                        establishmentId: {
-                            in: establishmentIds
-                        },
-                        isActive: true,
-                        dateTimestamp: {
-                            gte: new Date()
-                        }
+                        OR: [
+                            // Eventos dos estabelecimentos do owner
+                            {
+                                establishmentId: {
+                                    in: establishmentIds
+                                }
+                            },
+                            // Eventos criados pelo próprio owner
+                            {
+                                useruid: useruid
+                            }
+                        ]
                     },
                     include: {
                         establishment: true,
@@ -694,7 +821,27 @@ export class EventController {
                 events = dbEvents;
                 
             } else {
-                events = [];
+                // Se não tem estabelecimentos, buscar apenas eventos criados pelo owner
+                const dbEvents = await this.prisma.event.findMany({
+                    where: {
+                        useruid: useruid
+                    },
+                    include: {
+                        establishment: true,
+                        user: true,
+                        ManageEvents: {
+                            include: {
+                                user: true
+                            }
+                        },
+                        Ticket: true
+                    },
+                    orderBy: {
+                        dateTimestamp: 'desc'
+                    }
+                });
+                
+                events = dbEvents;
             }
         } else if (type === 'PERSONAL') {
             events = [];
@@ -777,15 +924,41 @@ export class EventController {
           where: { userOwnerUid: user.userId },
           select: { id: true }
         });
-        const establishmentIds = establishments.map(e => e.id);
-        events = await this.prisma.event.findMany({
-          where: { establishmentId: { in: establishmentIds } },
-          include: {
-            Ticket: {
-              include: { TicketSale: true }
+        
+        if (establishments.length > 0) {
+          const establishmentIds = establishments.map(e => e.id);
+          events = await this.prisma.event.findMany({
+            where: {
+              OR: [
+                // Eventos dos estabelecimentos do owner
+                {
+                  establishmentId: { in: establishmentIds }
+                },
+                // Eventos criados pelo próprio owner
+                {
+                  useruid: user.userId
+                }
+              ]
+            },
+            include: {
+              Ticket: {
+                include: { TicketSale: true }
+              }
             }
-          }
-        });
+          });
+        } else {
+          // Se não tem estabelecimentos, buscar apenas eventos criados pelo owner
+          events = await this.prisma.event.findMany({
+            where: {
+              useruid: user.userId
+            },
+            include: {
+              Ticket: {
+                include: { TicketSale: true }
+              }
+            }
+          });
+        }
       }
 
       // Montar resposta no formato esperado
@@ -849,14 +1022,17 @@ export class EventController {
                 throw new UnauthorizedException('Você não tem permissão para visualizar este evento');
             }
         } else if (type === 'PROFESSIONAL_OWNER') {
-            // Owners podem ver eventos do seu estabelecimento
+            // Owners podem ver eventos do seu estabelecimento E eventos que criaram
             const establishments = await this.prisma.establishment.findMany({
                 where: { userOwnerUid: useruid },
                 select: { id: true }
             });
             
             const establishmentIds = establishments.map(e => e.id);
-            if (!establishmentIds.includes(event.event.establishmentId)) {
+            const isOwnerOfEstablishment = establishmentIds.includes(event.event.establishmentId);
+            const isCreatorOfEvent = event.event.useruid === useruid;
+            
+            if (!isOwnerOfEstablishment && !isCreatorOfEvent) {
                 throw new UnauthorizedException('Você não tem permissão para visualizar este evento');
             }
         } else {

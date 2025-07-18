@@ -17,33 +17,23 @@ export class PermissionsService {
             return false;
         }
 
-        console.log('=== DEBUG canInsertTickets ===');
-        console.log('Event:', event);
-        console.log('Event.establishmentId:', event.establishmentId);
-        console.log('UserId:', userId);
-
         // Se o usuário é o dono do evento, permitir
         if (event.useruid === userId) {
-            console.log('Usuário é dono do evento - PERMITIDO');
             return true;
         }
 
         // Se o usuário é o owner do estabelecimento, permitir
         if (event.establishmentId) {
-            console.log('Buscando establishment com ID:', event.establishmentId);
             const establishment = await this.prisma.establishment.findUnique({
                 where: { id: event.establishmentId }
             });
-            console.log('Establishment encontrado:', establishment);
             
             if (establishment && establishment.userOwnerUid === userId) {
-                console.log('Usuário é owner do estabelecimento - PERMITIDO');
                 return true;
             }
         }
 
         // Recepcionistas não podem alterar dados de eventos (só usam app mobile)
-        console.log('Usuário não tem permissão - NEGADO');
         return false;
     }
 

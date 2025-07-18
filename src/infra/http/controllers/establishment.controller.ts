@@ -25,11 +25,47 @@ export class EstablishmentController {
 
     @UseGuards(JwtAuthGuard)
     @Post()
-    @ApiOperation({ summary: 'Create new establishment' })
-    @ApiBody({ type: EstablishmentBody })
-    @ApiResponse({ status: 201, description: 'Establishment created successfully' })
-    @ApiResponse({ status: 400, description: 'Invalid data' })
-    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiOperation({ 
+        summary: 'Criar novo estabelecimento',
+        description: 'Cria um novo estabelecimento no sistema. Apenas usuários profissionais podem criar estabelecimentos.'
+    })
+    @ApiBody({ 
+        type: EstablishmentBody,
+        description: 'Dados do estabelecimento a ser criado',
+        examples: {
+            estabelecimentoCompleto: {
+                summary: 'Estabelecimento completo',
+                value: {
+                    name: 'Casa de Festas ABC',
+                    description: 'Local perfeito para eventos especiais',
+                    address: 'Rua das Flores, 123 - São Paulo, SP',
+                    coordinates: {
+                        latitude: -23.5505,
+                        longitude: -46.6333
+                    },
+                    contactPhone: '(11) 99999-9999',
+                    website: 'https://casafestasabc.com',
+                    socialMedia: {
+                        instagram: '@casafestasabc',
+                        facebook: 'Casa de Festas ABC'
+                    },
+                    photos: ['url-da-foto-1', 'url-da-foto-2']
+                }
+            }
+        }
+    })
+    @ApiResponse({ 
+        status: 201, 
+        description: 'Estabelecimento criado com sucesso',
+        schema: {
+            type: 'object',
+            properties: {
+                establishment: { type: 'object', description: 'Dados do estabelecimento criado' }
+            }
+        }
+    })
+    @ApiResponse({ status: 400, description: 'Dados inválidos' })
+    @ApiResponse({ status: 401, description: 'Não autorizado' })
     async create(@Request() req, @Body() body: EstablishmentBody) {
         const { userId: useruid } = req.user
 
@@ -63,52 +99,31 @@ export class EstablishmentController {
     }
 
     @UseGuards(JwtAuthGuard)
-    @Put("admin/:id")
-    @ApiOperation({ summary: 'Update establishment by admin' })
-    @ApiResponse({ status: 200, description: 'Establishment updated successfully' })
-    @ApiResponse({ status: 400, description: 'Invalid data' })
-    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @Put("admin/update/:id")
+    @ApiOperation({ 
+        summary: 'Atualizar estabelecimento (Admin)',
+        description: 'Permite que administradores atualizem qualquer estabelecimento.'
+    })
+    @ApiResponse({ status: 200, description: 'Estabelecimento atualizado com sucesso' })
+    @ApiResponse({ status: 400, description: 'Dados inválidos' })
+    @ApiResponse({ status: 401, description: 'Não autorizado' })
+    @ApiResponse({ status: 404, description: 'Estabelecimento não encontrado' })
     async updateByAdmin(@Param("id") id: string, @Request() req, @Body() body: { name?: string; address?: string; coordinates?: any; description?: string; contactPhone?: string; website?: string; socialMedia?: any }) {
         const { userId: useruid, type } = req.user;
         
-        console.log('🔍 DEBUG - Dados recebidos para atualização:');
-        console.log('ID:', id);
-        console.log('Body completo:', JSON.stringify(body, null, 2));
-        console.log('Coordenadas recebidas:', body.coordinates);
-        
         // Conversão defensiva das coordenadas
         if (body.coordinates) {
-          console.log('📍 Coordenadas antes da conversão:', body.coordinates);
           if ('lat' in body.coordinates && 'lng' in body.coordinates) {
             body.coordinates = {
               latitude: Number(body.coordinates.lat),
               longitude: Number(body.coordinates.lng)
             };
-            console.log('🔄 Coordenadas convertidas de {lat,lng} para {latitude,longitude}:', body.coordinates);
-          } else if ('latitude' in body.coordinates && 'longitude' in body.coordinates) {
-            console.log('✅ Coordenadas já estão no formato correto:', body.coordinates);
-          } else {
-            console.log('⚠️ Formato de coordenadas desconhecido:', body.coordinates);
           }
-        } else {
-          console.log('❌ Nenhuma coordenada recebida');
         }
         
         // Se for MASTER, permitir editar qualquer estabelecimento
         // Se não for MASTER, usar o userOwnerUid normal
         const userOwnerUid = type === "MASTER" ? null : useruid;
-        
-        console.log('📤 Enviando para updateEstablishment.execute:', {
-            id,
-            userOwnerUid,
-            name: body.name,
-            address: body.address,
-            coordinates: body.coordinates,
-            description: body.description,
-            contactPhone: body.contactPhone,
-            website: body.website,
-            socialMedia: body.socialMedia
-        });
         
         await this.updateEstablishment.execute({
             id,
@@ -122,15 +137,30 @@ export class EstablishmentController {
             socialMedia: body.socialMedia
         });
 
-        console.log('✅ Estabelecimento atualizado com sucesso');
         return { message: 'Establishment updated successfully' };
     }
 
     @UseGuards(JwtAuthGuard)
     @Get()
-    @ApiOperation({ summary: 'Get all establishments' })
-    @ApiResponse({ status: 200, description: 'Establishments retrieved successfully' })
-    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiOperation({ 
+        summary: 'Listar todos os estabelecimentos',
+        description: 'Retorna todos os estabelecimentos cadastrados no sistema.'
+    })
+    @ApiResponse({ 
+        status: 200, 
+        description: 'Estabelecimentos encontrados com sucesso',
+        schema: {
+            type: 'object',
+            properties: {
+                establishments: { 
+                    type: 'array',
+                    items: { type: 'object' },
+                    description: 'Lista de todos os estabelecimentos'
+                }
+            }
+        }
+    })
+    @ApiResponse({ status: 401, description: 'Não autorizado' })
     async findAll(@Request() req, @Body() body) {
 
         const { establishments } = await this.findAllEstablishments.execute()
@@ -139,38 +169,33 @@ export class EstablishmentController {
     }
 
     @Get("map")
-    @ApiOperation({ summary: 'Get establishments for map display' })
-    @ApiResponse({ status: 200, description: 'Establishments for map retrieved successfully' })
+    @ApiOperation({ 
+        summary: 'Buscar estabelecimentos para o mapa',
+        description: 'Retorna estabelecimentos com coordenadas válidas para exibição no mapa do app mobile.'
+    })
+    @ApiResponse({ 
+        status: 200, 
+        description: 'Estabelecimentos encontrados com sucesso',
+        schema: {
+            type: 'object',
+            properties: {
+                establishments: { 
+                    type: 'array',
+                    items: { type: 'object' },
+                    description: 'Lista de estabelecimentos com coordenadas válidas'
+                }
+            }
+        }
+    })
     async findForMap() {
-        console.log('🔍 Buscando estabelecimentos para o mapa...');
-        
         const { establishments } = await this.findAllEstablishments.execute()
-        console.log('📊 Total de estabelecimentos encontrados:', establishments.length);
-
-        // Log dos primeiros estabelecimentos para debug
-        establishments.slice(0, 3).forEach((est, index) => {
-            console.log(`📍 Estabelecimento ${index + 1}:`, {
-                name: est.name,
-                coord: est.coord,
-                coordType: typeof est.coord,
-                hasCoord: !!est.coord
-            });
-        });
 
         // Filtrar apenas estabelecimentos que têm coordenadas válidas
         const validEstablishments = establishments.filter(est => {
-            const isValid = est.coord && 
+            return est.coord && 
                    typeof est.coord.latitude === 'number' && 
                    typeof est.coord.longitude === 'number';
-            
-            if (!isValid) {
-                console.log(`❌ Estabelecimento ${est.name} não tem coordenadas válidas:`, est.coord);
-            }
-            
-            return isValid;
         });
-
-        console.log('✅ Estabelecimentos com coordenadas válidas:', validEstablishments.length);
 
         return { establishments: validEstablishments.map(EstablishmentViewModel.toHTTP) }
     }

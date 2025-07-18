@@ -24,11 +24,46 @@ export class TicketController {
 
   @UseGuards(JwtAuthGuard, CanInsertTicketsGuard)
   @Post()
-  @ApiOperation({ summary: 'Create new ticket' })
-  @ApiBody({ type: TicketBody })
-  @ApiResponse({ status: 201, description: 'Ticket created successfully' })
-  @ApiResponse({ status: 400, description: 'Invalid data' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiOperation({ 
+    summary: 'Criar novo ingresso',
+    description: 'Cria um novo tipo de ingresso para um evento. Apenas owners e promoters podem criar ingressos.'
+  })
+  @ApiBody({ 
+    type: TicketBody,
+    description: 'Dados do ingresso a ser criado',
+    examples: {
+      ingressoPadrao: {
+        summary: 'Ingresso padrão',
+        value: {
+          description: 'Ingresso Padrão',
+          price: 50.00,
+          eventId: 'uuid-do-evento',
+          quantity_available: 100
+        }
+      },
+      ingressoVIP: {
+        summary: 'Ingresso VIP',
+        value: {
+          description: 'Ingresso VIP com área exclusiva',
+          price: 150.00,
+          eventId: 'uuid-do-evento',
+          quantity_available: 50
+        }
+      }
+    }
+  })
+  @ApiResponse({ 
+    status: 201, 
+    description: 'Ingresso criado com sucesso',
+    schema: {
+      type: 'object',
+      properties: {
+        ticket: { type: 'object', description: 'Dados do ingresso criado' }
+      }
+    }
+  })
+  @ApiResponse({ status: 400, description: 'Dados inválidos' })
+  @ApiResponse({ status: 401, description: 'Não autorizado' })
   async create(@Request() req, @Body() body: TicketBody) {
     const { userId: useruid } = req.user;
     const { description, price, eventId, quantity_available } = body;
@@ -46,11 +81,37 @@ export class TicketController {
 
   @UseGuards(JwtAuthGuard, CanUpdateticketsGuard)
   @Put(':id')
-  @ApiOperation({ summary: 'Update ticket' })
-  @ApiBody({ type: UpdateTicketBody })
-  @ApiResponse({ status: 200, description: 'Ticket updated successfully' })
-  @ApiResponse({ status: 400, description: 'Invalid data' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiOperation({ 
+    summary: 'Atualizar ingresso',
+    description: 'Atualiza os dados de um ingresso existente. Apenas o criador do ingresso pode atualizá-lo.'
+  })
+  @ApiBody({ 
+    type: UpdateTicketBody,
+    description: 'Dados do ingresso a ser atualizado',
+    examples: {
+      atualizarPreco: {
+        summary: 'Atualizar preço e quantidade',
+        value: {
+          price: 75.00,
+          eventId: 'uuid-do-evento',
+          quantity_available: 80
+        }
+      }
+    }
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Ingresso atualizado com sucesso',
+    schema: {
+      type: 'object',
+      properties: {
+        ticket: { type: 'object', description: 'Dados do ingresso atualizado' }
+      }
+    }
+  })
+  @ApiResponse({ status: 400, description: 'Dados inválidos' })
+  @ApiResponse({ status: 401, description: 'Não autorizado' })
+  @ApiResponse({ status: 404, description: 'Ingresso não encontrado' })
   async update(@Param('id') id: string, @Request() req, @Body() body: UpdateTicketBody) {
     const { userId: useruid } = req.user;
     const { price, eventId, quantity_available } = body;
@@ -68,10 +129,22 @@ export class TicketController {
 
   @UseGuards(JwtAuthGuard, CanDeleteTicketsGuard)
   @Delete(':id')
-  @ApiOperation({ summary: 'Delete ticket' })
-  @ApiResponse({ status: 200, description: 'Ticket deleted successfully' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 404, description: 'Ticket not found' })
+  @ApiOperation({ 
+    summary: 'Deletar ingresso',
+    description: 'Remove um ingresso do sistema. Apenas o criador do ingresso pode deletá-lo.'
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Ingresso deletado com sucesso',
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string', example: 'Ticket deleted successfully' }
+      }
+    }
+  })
+  @ApiResponse({ status: 401, description: 'Não autorizado' })
+  @ApiResponse({ status: 404, description: 'Ingresso não encontrado' })
   async delete(@Param('id') id: string, @Request() req) {
     const { userId: useruid } = req.user;
     await this.deleteTicket.execute({
@@ -83,9 +156,25 @@ export class TicketController {
 
   @UseGuards(JwtAuthGuard)
   @Get('user')
-  @ApiOperation({ summary: 'Get user tickets' })
-  @ApiResponse({ status: 200, description: 'User tickets retrieved successfully' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiOperation({ 
+    summary: 'Buscar ingressos do usuário',
+    description: 'Retorna todos os ingressos comprados pelo usuário autenticado.'
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Ingressos encontrados com sucesso',
+    schema: {
+      type: 'object',
+      properties: {
+        tickets: { 
+          type: 'array',
+          items: { type: 'object' },
+          description: 'Lista de ingressos comprados pelo usuário'
+        }
+      }
+    }
+  })
+  @ApiResponse({ status: 401, description: 'Não autorizado' })
   async getUserTickets(@Request() req) {
     const { userId } = req.user;
     const { tickets } = await this.findTicketPurchase.execute({ userId });

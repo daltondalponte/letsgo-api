@@ -631,9 +631,6 @@ export class AdminController {
                 throw new UnauthorizedException("You can only delete your own ticket takers");
             }
 
-            // DEBUG LOGS
-            console.log('TicketTaker to unlink:', ticketTaker.userTicketTakerUid);
-
             // Buscar todos os eventos onde este TICKETTAKER está associado (pela tabela eventsReceptionist)
             const eventsWithTicketTaker = await this.prisma.eventsReceptionist.findMany({
                 where: {
@@ -644,27 +641,19 @@ export class AdminController {
                 }
             });
 
-            console.log('Events found for this TicketTaker:', eventsWithTicketTaker.map(e => ({ id: e.event.id, name: e.event.name })));
-
             // Remover todas as associações na tabela eventsReceptionist para esse TicketTaker
             const allEventManagers = await this.prisma.eventsReceptionist.findMany({
                 where: { useruid: ticketTaker.userTicketTakerUid }
             });
 
-            console.log('Associations in eventsReceptionist table before deletion:', allEventManagers.map(e => ({ id: e.id, eventId: e.eventId, useruid: e.useruid })));
-
             const deleteResult = await this.prisma.eventsReceptionist.deleteMany({
                 where: { useruid: ticketTaker.userTicketTakerUid }
             });
-
-            console.log('Total links removed from eventsReceptionist table:', deleteResult.count);
 
             // Verificar se ainda há vínculos após a deleção
             const allEventManagersAfter = await this.prisma.eventsReceptionist.findMany({
                 where: { useruid: ticketTaker.userTicketTakerUid }
             });
-
-            console.log('Associations in eventsReceptionist table after deletion:', allEventManagersAfter.map(e => ({ id: e.id, eventId: e.eventId, useruid: e.useruid })));
 
             // Deletar apenas a associação, não o usuário
             await this.prisma.ticketTaker.delete({

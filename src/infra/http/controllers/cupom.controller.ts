@@ -1,6 +1,6 @@
 import { Controller, Body, UseGuards, Post, Get, Request, Put, Query, Delete, Param } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiParam, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
 import { CreateCupom } from '@application/cupom/use-cases/create-cupom';
 import { UpdateCupom } from '@application/cupom/use-cases/update-cupom';
 import { DeleteCupom } from '@application/cupom/use-cases/delete-cupom';
@@ -31,6 +31,43 @@ export class CupomController {
 
     @UseGuards(JwtAuthGuard, CanInsertCuponsGuard)
     @Post("create")
+    @ApiBearerAuth()
+    @ApiOperation({ 
+        summary: 'Criar cupom de desconto',
+        description: 'Cria um novo cupom de desconto. Pode ser global (para todos os eventos) ou específico para um evento. Apenas Owners e Promoters podem criar cupons.'
+    })
+    @ApiBody({ 
+        type: CupomBody,
+        description: 'Dados do cupom a ser criado'
+    })
+    @ApiResponse({ 
+        status: 201, 
+        description: 'Cupom criado com sucesso',
+        schema: {
+            type: 'object',
+            properties: {
+                cupom: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'string' },
+                        code: { type: 'string' },
+                        descont_percent: { type: 'number' },
+                        discount_value: { type: 'number' },
+                        quantity_available: { type: 'number' },
+                        expires_at: { type: 'string', format: 'date-time' },
+                        event_id: { type: 'string', nullable: true },
+                        user_uid: { type: 'string' },
+                        description: { type: 'string' },
+                        createdAt: { type: 'string', format: 'date-time' },
+                        updatedAt: { type: 'string', format: 'date-time' }
+                    }
+                }
+            }
+        }
+    })
+    @ApiResponse({ status: 400, description: 'Dados inválidos' })
+    @ApiResponse({ status: 401, description: 'Não autorizado' })
+    @ApiResponse({ status: 403, description: 'Sem permissão para criar cupons' })
     async create(@Request() req, @Body() body: CupomBody) {
         const { userId: useruid } = req.user
         const { code, descont_percent, quantity_available, eventId, expiresAt, discount_value, description } = body
@@ -61,17 +98,35 @@ export class CupomController {
 
     @UseGuards(JwtAuthGuard, CanUpdateCuponsGuard)
     @Put("update")
+    @ApiBearerAuth()
+    @ApiOperation({ 
+        summary: 'Atualizar cupom de desconto',
+        description: 'Atualiza um cupom de desconto existente. Apenas o criador do cupom pode editá-lo.'
+    })
+    @ApiQuery({ 
+        name: 'id', 
+        description: 'ID do cupom a ser atualizado',
+        type: 'string'
+    })
+    @ApiBody({ 
+        type: UpdateBody,
+        description: 'Dados do cupom a ser atualizado'
+    })
+    @ApiResponse({ 
+        status: 200, 
+        description: 'Cupom atualizado com sucesso',
+        schema: {
+            type: 'string',
+            example: 'sucesso'
+        }
+    })
+    @ApiResponse({ status: 400, description: 'Dados inválidos' })
+    @ApiResponse({ status: 401, description: 'Não autorizado' })
+    @ApiResponse({ status: 403, description: 'Sem permissão para editar este cupom' })
+    @ApiResponse({ status: 404, description: 'Cupom não encontrado' })
     async update(@Query() query, @Request() req, @Body() body: UpdateBody) {
         const { userId: useruid } = req.user
         const id = typeof query === 'object' && query.id ? query.id : query;
-        
-        // DEBUG: Log do que está chegando
-        console.log('=== DEBUG UPDATE CUPOM ===');
-        console.log('query original:', query);
-        console.log('id extraído:', id);
-        console.log('body completo:', body);
-        console.log('body.eventId:', body.eventId);
-        console.log('typeof body.eventId:', typeof body.eventId);
         
         const { code, descont_percent, discount_value, quantity_available, description, eventId, expiresAt } = body
 
@@ -88,7 +143,7 @@ export class CupomController {
 
         await this.createCupomAudit.execute({
             useruid,
-            modificationType: "CREATECUPOM",
+            modificationType: "UPDATECUPOM",
             details: { code, descont_percent, quantity_available },
             entityId: id
         }).catch(console.error)
@@ -98,6 +153,27 @@ export class CupomController {
 
     @UseGuards(JwtAuthGuard, CanUpdateCuponsGuard)
     @Delete("delete/:id")
+    @ApiBearerAuth()
+    @ApiOperation({ 
+        summary: 'Deletar cupom de desconto',
+        description: 'Remove um cupom de desconto. Apenas o criador do cupom pode deletá-lo.'
+    })
+    @ApiParam({ 
+        name: 'id', 
+        description: 'ID do cupom a ser deletado',
+        type: 'string'
+    })
+    @ApiResponse({ 
+        status: 200, 
+        description: 'Cupom deletado com sucesso',
+        schema: {
+            type: 'string',
+            example: 'sucesso'
+        }
+    })
+    @ApiResponse({ status: 401, description: 'Não autorizado' })
+    @ApiResponse({ status: 403, description: 'Sem permissão para deletar este cupom' })
+    @ApiResponse({ status: 404, description: 'Cupom não encontrado' })
     async delete(@Param('id') id: string, @Request() req) {
         const { userId: useruid } = req.user
 
@@ -117,6 +193,40 @@ export class CupomController {
 
     @UseGuards(JwtAuthGuard, EnsureManagerEvent)
     @Post("attachTicket")
+    @ApiBearerAuth()
+    @ApiOperation({ 
+        summary: 'Vincular cupom a ticket',
+        description: 'Vincula um cupom de desconto a um ticket específico. Apenas managers do evento podem realizar esta operação.'
+    })
+    @ApiBody({
+        schema: {
+            type: 'object',
+            properties: {
+                cupomId: {
+                    type: 'string',
+                    description: 'ID do cupom a ser vinculado',
+                    example: 'cupom-123'
+                },
+                ticketId: {
+                    type: 'string',
+                    description: 'ID do ticket ao qual o cupom será vinculado',
+                    example: 'ticket-456'
+                }
+            },
+            required: ['cupomId', 'ticketId']
+        }
+    })
+    @ApiResponse({ 
+        status: 200, 
+        description: 'Cupom vinculado com sucesso',
+        schema: {
+            type: 'string',
+            example: 'sucesso'
+        }
+    })
+    @ApiResponse({ status: 401, description: 'Não autorizado' })
+    @ApiResponse({ status: 403, description: 'Sem permissão para gerenciar este evento' })
+    @ApiResponse({ status: 404, description: 'Cupom ou ticket não encontrado' })
     async attachTicket(@Request() req, @Body() body: any) {
         const { userId: useruid } = req.user
         const { cupomId, ticketId } = body
@@ -133,6 +243,37 @@ export class CupomController {
 
     @UseGuards(JwtAuthGuard, EnsureManagerEvent)
     @Delete("dettachTicket/:eventId")
+    @ApiBearerAuth()
+    @ApiOperation({ 
+        summary: 'Desvincular cupom de ticket',
+        description: 'Remove a vinculação entre um cupom de desconto e um ticket. Apenas managers do evento podem realizar esta operação.'
+    })
+    @ApiParam({ 
+        name: 'eventId', 
+        description: 'ID do evento',
+        type: 'string'
+    })
+    @ApiQuery({ 
+        name: 'cupomId', 
+        description: 'ID do cupom a ser desvinculado',
+        type: 'string'
+    })
+    @ApiQuery({ 
+        name: 'ticketId', 
+        description: 'ID do ticket do qual o cupom será desvinculado',
+        type: 'string'
+    })
+    @ApiResponse({ 
+        status: 200, 
+        description: 'Cupom desvinculado com sucesso',
+        schema: {
+            type: 'string',
+            example: 'sucesso'
+        }
+    })
+    @ApiResponse({ status: 401, description: 'Não autorizado' })
+    @ApiResponse({ status: 403, description: 'Sem permissão para gerenciar este evento' })
+    @ApiResponse({ status: 404, description: 'Cupom ou ticket não encontrado' })
     async dettachTicket(@Query() query, @Request() req) {
         const { userId: useruid } = req.user
         const { cupomId, ticketId } = query
@@ -149,6 +290,49 @@ export class CupomController {
 
     @UseGuards(JwtAuthGuard)
     @Get("findOneByCode")
+    @ApiBearerAuth()
+    @ApiOperation({ 
+        summary: 'Buscar cupom por código',
+        description: 'Busca um cupom específico pelo código, ticket e evento.'
+    })
+    @ApiQuery({ 
+        name: 'ticketId', 
+        description: 'ID do ticket',
+        type: 'string'
+    })
+    @ApiQuery({ 
+        name: 'code', 
+        description: 'Código do cupom',
+        type: 'string'
+    })
+    @ApiQuery({ 
+        name: 'eventId', 
+        description: 'ID do evento (opcional para cupons globais)',
+        type: 'string',
+        required: false
+    })
+    @ApiResponse({ 
+        status: 200, 
+        description: 'Cupom encontrado',
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'string' },
+                code: { type: 'string' },
+                descont_percent: { type: 'number' },
+                discount_value: { type: 'number' },
+                quantity_available: { type: 'number' },
+                expires_at: { type: 'string', format: 'date-time' },
+                event_id: { type: 'string', nullable: true },
+                user_uid: { type: 'string' },
+                description: { type: 'string' },
+                createdAt: { type: 'string', format: 'date-time' },
+                updatedAt: { type: 'string', format: 'date-time' }
+            }
+        }
+    })
+    @ApiResponse({ status: 401, description: 'Não autorizado' })
+    @ApiResponse({ status: 404, description: 'Cupom não encontrado' })
     async findByCodeAndTicketId(@Query() query) {
 
         const {
@@ -168,6 +352,46 @@ export class CupomController {
 
     @UseGuards(JwtAuthGuard, EnsureManagerEvent)
     @Get("findAllByTicket")
+    @ApiBearerAuth()
+    @ApiOperation({ 
+        summary: 'Buscar cupons por ticket',
+        description: 'Lista todos os cupons associados a um ticket específico. Apenas managers do evento podem acessar.'
+    })
+    @ApiQuery({ 
+        name: 'ticketId', 
+        description: 'ID do ticket',
+        type: 'string'
+    })
+    @ApiResponse({ 
+        status: 200, 
+        description: 'Lista de cupons encontrados',
+        schema: {
+            type: 'object',
+            properties: {
+                cupons: {
+                    type: 'array',
+                    items: {
+                        type: 'object',
+                        properties: {
+                            id: { type: 'string' },
+                            code: { type: 'string' },
+                            descont_percent: { type: 'number' },
+                            discount_value: { type: 'number' },
+                            quantity_available: { type: 'number' },
+                            expires_at: { type: 'string', format: 'date-time' },
+                            event_id: { type: 'string', nullable: true },
+                            user_uid: { type: 'string' },
+                            description: { type: 'string' },
+                            createdAt: { type: 'string', format: 'date-time' },
+                            updatedAt: { type: 'string', format: 'date-time' }
+                        }
+                    }
+                }
+            }
+        }
+    })
+    @ApiResponse({ status: 401, description: 'Não autorizado' })
+    @ApiResponse({ status: 403, description: 'Sem permissão para acessar este ticket' })
     async findByTicketId(@Query() ticketId) {
 
         const { cupons } = await this.findByTicket.execute({
@@ -179,6 +403,41 @@ export class CupomController {
 
     @UseGuards(JwtAuthGuard)
     @Get('findAllByUser')
+    @ApiBearerAuth()
+    @ApiOperation({ 
+        summary: 'Buscar cupons do usuário',
+        description: 'Lista todos os cupons criados pelo usuário logado. Para Owners, mostra apenas cupons de eventos que eles criaram. Para Promoters, mostra cupons de eventos que eles criaram.'
+    })
+    @ApiResponse({ 
+        status: 200, 
+        description: 'Lista de cupons do usuário',
+        schema: {
+            type: 'object',
+            properties: {
+                cupons: {
+                    type: 'array',
+                    items: {
+                        type: 'object',
+                        properties: {
+                            id: { type: 'string' },
+                            code: { type: 'string' },
+                            descont_percent: { type: 'number' },
+                            discount_value: { type: 'number' },
+                            quantity_available: { type: 'number' },
+                            expires_at: { type: 'string', format: 'date-time' },
+                            event_id: { type: 'string', nullable: true },
+                            eventName: { type: 'string' },
+                            user_uid: { type: 'string' },
+                            description: { type: 'string' },
+                            createdAt: { type: 'string', format: 'date-time' },
+                            updatedAt: { type: 'string', format: 'date-time' }
+                        }
+                    }
+                }
+            }
+        }
+    })
+    @ApiResponse({ status: 401, description: 'Não autorizado' })
     async findAllByUser(@Request() req) {
       const { userId, type } = req.user;
       
@@ -195,15 +454,9 @@ export class CupomController {
           });
           eventIds = events.map(e => e.id);
         } else if (type === 'PROFESSIONAL_OWNER') {
-          // Owners: buscar eventos do seu estabelecimento
-          const establishments = await this.prisma.establishment.findMany({
-            where: { userOwnerUid: userId },
-            select: { id: true }
-          });
-          const establishmentIds = establishments.map(e => e.id);
-          
+          // Owners: buscar apenas eventos criados por eles (não todos os eventos do estabelecimento)
           const events = await this.prisma.event.findMany({
-            where: { establishmentId: { in: establishmentIds } },
+            where: { useruid: userId },
             select: { id: true, name: true }
           });
           eventIds = events.map(e => e.id);

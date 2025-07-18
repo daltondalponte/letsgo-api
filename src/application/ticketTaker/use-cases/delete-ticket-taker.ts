@@ -40,7 +40,6 @@ export class DeleteTicketTaker {
                 ticketTaker = await this.ticketTackerRepository.findByUserTakerId(id);
             } catch (error) {
                 // Se não encontrar o registro TicketTaker, continuar apenas com a deleção do usuário
-                console.log('Registro TicketTaker não encontrado, deletando apenas o usuário');
             }
 
             // Se encontrou o registro TicketTaker, deletá-lo primeiro

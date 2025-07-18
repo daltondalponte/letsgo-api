@@ -422,10 +422,8 @@ export class PrismaEventRepository implements EventRepository {
             }
         });
 
-        // Filtrar eventos que não têm aprovação ainda
-        const pendingEvents = events.filter(event => !event.EventApprovals);
-
-        return pendingEvents.map(event => ({
+        // Retornar todos os eventos inativos (pendentes de aprovação)
+        return events.map(event => ({
             id: event.id,
             name: event.name,
             description: event.description,

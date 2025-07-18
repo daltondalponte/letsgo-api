@@ -3,17 +3,30 @@ import { ApiProperty } from "@nestjs/swagger"
 
 export class UserBody {
 
-    @ApiProperty()
+    @ApiProperty({
+        description: 'Nome completo do usuário',
+        example: 'João Silva',
+        minLength: 2,
+        maxLength: 100
+    })
     @IsNotEmpty()
     @IsString()
     name: string;
 
-    @ApiProperty()
+    @ApiProperty({
+        description: 'Email do usuário (deve ser único)',
+        example: 'joao@email.com',
+        format: 'email'
+    })
     @IsNotEmpty()
     @IsEmail()
     email: string;
 
-    @ApiProperty()
+    @ApiProperty({
+        description: 'Senha do usuário (mínimo 8 caracteres)',
+        example: 'senha123',
+        minLength: 8
+    })
     @IsNotEmpty()
     @IsString()
     @MinLength(8, { message: 'A senha deve ter pelo menos 8 caracteres' })
@@ -39,7 +52,12 @@ export class UserBody {
     @IsBoolean()
     isOwnerOfEstablishment: boolean;
 
-    @ApiProperty()
+    @ApiProperty({
+        description: 'Tipo do usuário',
+        example: 'PERSONAL',
+        enum: ['PERSONAL', 'PROFESSIONAL_OWNER', 'PROFESSIONAL_PROMOTER', 'TICKETTAKER'],
+        default: 'PERSONAL'
+    })
     @IsOptional()
     @IsString()
     type: 'PERSONAL' | 'PROFESSIONAL_OWNER' | 'PROFESSIONAL_PROMOTER' | 'TICKETTAKER'

@@ -9,7 +9,7 @@ export class StripeService {
 
     constructor() {
         this.stripe = new Stripe('sk_test_51NagwlGiMV6RYH8nDpFcIRLn8zPqzPc96RYVRBWGyoQt76GbKU4lBJOltzdT9Xf9hyTT8NnDVIq0BCJwKrghFToD00J11FCoV4', {
-            apiVersion: "2022-11-15"
+            apiVersion: "2025-06-30.basil"
         });
     }
 
@@ -84,7 +84,7 @@ export class StripeService {
     async createPaymentIntent(amount: number, tax: number, destination: string, purchaseId: string, paymentId: string, customerId: string, userDeviceToken: string) {
         const ephemeralKey = await this.stripe.ephemeralKeys.create(
             { customer: customerId },
-            { apiVersion: '2022-11-15' }
+            { apiVersion: '2025-06-30.basil' }
         );
         const paymentIntent = await this.stripe.paymentIntents.create({
             amount,
